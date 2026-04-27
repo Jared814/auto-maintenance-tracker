@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, integer, real, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, integer, real, index, primaryKey } from 'drizzle-orm/pg-core';
 
 export const accounts = pgTable('accounts', {
   id: text('id').primaryKey(),
@@ -70,6 +70,13 @@ export const fuelLogs = pgTable('fuel_logs', {
   created_at: text('created_at').notNull(),
 }, (table) => [
   index('idx_fuel_logs_vehicle_date').on(table.vehicle_id, table.filled_at),
+]);
+
+export const accountDisabledTypes = pgTable('account_disabled_types', {
+  account_id: text('account_id').references(() => accounts.id).notNull(),
+  type_id: text('type_id').references(() => maintenanceTypes.id).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.account_id, table.type_id] }),
 ]);
 
 export const receipts = pgTable('receipts', {

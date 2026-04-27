@@ -1,6 +1,6 @@
-import { eq, and, desc, isNull, or } from 'drizzle-orm';
+import { eq, and, desc, isNull, or, notInArray } from 'drizzle-orm';
 import { db, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, accountDisabledTypes } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -184,9 +184,39 @@ export async function deleteVehicle(id: string, accountId: string) {
 // ---- MAINTENANCE TYPES ----
 
 export async function getMaintenanceTypes(accountId: string) {
-  return db.select()
-    .from(maintenanceTypes)
-    .where(or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId)));
+  const disabled = await db.select({ type_id: accountDisabledTypes.type_id })
+    .from(accountDisabledTypes)
+    .where(eq(accountDisabledTypes.account_id, accountId));
+  const disabledIds = disabled.map((r) => r.type_id);
+
+  const baseCondition = or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!;
+  if (disabledIds.length === 0) {
+    return db.select().from(maintenanceTypes).where(baseCondition);
+  }
+  return db.select().from(maintenanceTypes).where(and(baseCondition, notInArray(maintenanceTypes.id, disabledIds)));
+}
+
+export async function getMaintenanceTypesAll(accountId: string) {
+  return db.select().from(maintenanceTypes)
+    .where(or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!);
+}
+
+export async function getDisabledTypeIds(accountId: string): Promise<string[]> {
+  const rows = await db.select({ type_id: accountDisabledTypes.type_id })
+    .from(accountDisabledTypes)
+    .where(eq(accountDisabledTypes.account_id, accountId));
+  return rows.map((r) => r.type_id);
+}
+
+export async function disableMaintenanceType(accountId: string, typeId: string) {
+  await db.insert(accountDisabledTypes)
+    .values({ account_id: accountId, type_id: typeId })
+    .onConflictDoNothing();
+}
+
+export async function enableMaintenanceType(accountId: string, typeId: string) {
+  await db.delete(accountDisabledTypes)
+    .where(and(eq(accountDisabledTypes.account_id, accountId), eq(accountDisabledTypes.type_id, typeId)));
 }
 
 export async function createMaintenanceType(data: {

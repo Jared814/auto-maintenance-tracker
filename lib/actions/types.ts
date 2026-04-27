@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceType, deleteMaintenanceType, updateMaintenanceType } from '@/lib/db';
+import { createMaintenanceType, deleteMaintenanceType, updateMaintenanceType, disableMaintenanceType, enableMaintenanceType } from '@/lib/db';
 import { CreateMaintenanceTypeSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { ActionState } from '@/lib/actions/state';
@@ -77,5 +77,17 @@ export async function deleteMaintenanceTypeAction(id: string) {
   }
 
   await deleteMaintenanceType(id, session.user.id);
+  revalidatePath('/settings/maintenance-types');
+}
+
+export async function toggleMaintenanceTypeAction(typeId: string, enabled: boolean) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  if (enabled) {
+    await enableMaintenanceType(session.user.id, typeId);
+  } else {
+    await disableMaintenanceType(session.user.id, typeId);
+  }
   revalidatePath('/settings/maintenance-types');
 }

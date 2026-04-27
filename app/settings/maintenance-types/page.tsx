@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getMaintenanceTypes } from '@/lib/db';
+import { getMaintenanceTypesAll, getDisabledTypeIds } from '@/lib/db';
 import { AppShell } from '@/components/app-shell';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ChevronLeft } from 'lucide-react';
 import { MaintenanceTypesClient } from './types-client';
 
@@ -15,7 +13,10 @@ export default async function MaintenanceTypesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const types = await getMaintenanceTypes(session.user.id);
+  const [allTypes, disabledIds] = await Promise.all([
+    getMaintenanceTypesAll(session.user.id),
+    getDisabledTypeIds(session.user.id),
+  ]);
 
   return (
     <AppShell>
@@ -29,10 +30,10 @@ export default async function MaintenanceTypesPage() {
           <h1 className="text-2xl font-bold">Maintenance Types</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Default types apply to all accounts. You can add custom types for your account.
+          Toggle types on or off to control what the app tracks. Add custom types for your account.
         </p>
 
-        <MaintenanceTypesClient types={types} />
+        <MaintenanceTypesClient types={allTypes} disabledIds={disabledIds} />
       </div>
     </AppShell>
   );
