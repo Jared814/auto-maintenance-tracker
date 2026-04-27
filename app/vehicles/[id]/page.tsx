@@ -5,12 +5,14 @@ import {
   getVehicleById,
   getMaintenanceTypes,
   getMaintenanceLogsByVehicleId,
+  getFuelLogsByVehicleId,
 } from '@/lib/db';
+import { computeEconomy, avgEconomy } from '@/lib/fuel-economy';
 import { calculateMaintenanceStatus, statusBadgeClass, statusLabel } from '@/lib/maintenance-status';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, Pencil, QrCode, Plus } from 'lucide-react';
+import { ChevronLeft, Pencil, QrCode, Plus, Fuel } from 'lucide-react';
 import { formatMileage, formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -41,10 +43,16 @@ export default async function VehicleDetailPage({
   const vehicle = await getVehicleById(id, session.user.id);
   if (!vehicle) notFound();
 
-  const [allTypes, logs] = await Promise.all([
+  const [allTypes, logs, fuelLogs] = await Promise.all([
     getMaintenanceTypes(session.user.id),
     getMaintenanceLogsByVehicleId(id),
+    getFuelLogsByVehicleId(id),
   ]);
+
+  const economyPoints = computeEconomy(fuelLogs, vehicle.units);
+  const avgMpg = avgEconomy(economyPoints);
+  const lastMpg = economyPoints.length > 0 ? economyPoints[economyPoints.length - 1].value : null;
+  const unitLabel = vehicle.units === 'miles' ? 'MPG' : 'L/100km';
 
   // Build status for each type
   const statusByType = allTypes.map((type) => {
@@ -63,6 +71,33 @@ export default async function VehicleDetailPage({
     label: CATEGORY_LABELS[cat] ?? cat,
     items: statusByType.filter((s) => s.type.category === cat),
   })).filter((g) => g.items.length > 0);
+
+  function Sparkline({ values }: { values: number[] }) {
+    if (values.length < 2) return null;
+    const W = 80, H = 24;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const pts = values
+      .map((v, i) => {
+        const x = (i / (values.length - 1)) * W;
+        const y = H - ((v - min) / range) * (H * 0.8) - H * 0.1;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+    return (
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-16 h-5 text-primary shrink-0">
+        <polyline
+          points={pts}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
 
   return (
     <AppShell>
@@ -109,6 +144,48 @@ export default async function VehicleDetailPage({
               <span className="text-muted-foreground">Plate: </span>
               <span className="font-medium">{vehicle.license_plate}</span>
             </div>
+          )}
+        </div>
+
+        {/* Fuel Economy */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold">Fuel Economy</h2>
+            <Link href={`/vehicles/${id}/fuel`}>
+              <Button size="sm">
+                <Fuel className="size-4" />
+                Log Fill
+              </Button>
+            </Link>
+          </div>
+          {lastMpg !== null ? (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Last Fill</p>
+                    <p className="text-2xl font-bold tabular-nums">{lastMpg.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">{unitLabel}</p>
+                  </div>
+                  {avgMpg !== null && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Average</p>
+                      <p className="text-2xl font-bold tabular-nums">{avgMpg.toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">{unitLabel}</p>
+                    </div>
+                  )}
+                  <div className="ml-auto">
+                    <Sparkline values={economyPoints.map((p) => p.value)} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {fuelLogs.length === 0
+                ? 'Log your first fill-up to start tracking fuel economy.'
+                : 'Log one more fill-up to calculate economy.'}
+            </p>
           )}
         </div>
 

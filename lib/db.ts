@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull, or } from 'drizzle-orm';
 import { db, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -327,6 +327,44 @@ export async function deleteReceipt(id: string) {
   const receipt = await getReceiptById(id);
   await db.delete(receipts).where(eq(receipts.id, id));
   return receipt;
+}
+
+// ---- FUEL LOGS ----
+
+export async function createFuelLog(data: {
+  vehicle_id: string;
+  filled_at: string;
+  mileage: number;
+  fuel_quantity: number;
+  fuel_unit: string;
+  price_per_unit?: string | null;
+  notes?: string | null;
+}) {
+  const [log] = await db.insert(fuelLogs).values({
+    id: nanoid(),
+    ...data,
+    created_at: getNow(),
+  }).returning();
+  return log;
+}
+
+export async function getFuelLogsByVehicleId(vehicleId: string) {
+  return db.select()
+    .from(fuelLogs)
+    .where(eq(fuelLogs.vehicle_id, vehicleId))
+    .orderBy(desc(fuelLogs.filled_at));
+}
+
+export async function getFuelLogById(id: string) {
+  const [log] = await db.select()
+    .from(fuelLogs)
+    .where(eq(fuelLogs.id, id))
+    .limit(1);
+  return log ?? null;
+}
+
+export async function deleteFuelLog(id: string) {
+  await db.delete(fuelLogs).where(eq(fuelLogs.id, id));
 }
 
 // ---- PUBLIC QR DATA ----
