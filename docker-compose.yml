@@ -1,0 +1,55 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automotive-maint
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - AUTH_SECRET=change-this-to-a-secure-random-string-at-least-32-chars
+      - AUTH_TRUST_HOST=true
+      - NEXT_TELEMETRY_DISABLED=1
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/automotivemaint
+      # Cloudflare R2 (optional)
+      # - CLOUDFLARE_R2_ACCOUNT_ID=
+      # - CLOUDFLARE_R2_ACCESS_KEY_ID=
+      # - CLOUDFLARE_R2_SECRET_ACCESS_KEY=
+      # - CLOUDFLARE_R2_BUCKET_NAME=
+      # - CLOUDFLARE_R2_PUBLIC_URL=
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: automotive-maint-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: automotivemaint
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
