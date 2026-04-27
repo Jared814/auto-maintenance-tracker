@@ -4,35 +4,32 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LoginSchema, type CreateAccount } from '@/lib/schemas';
-import type { z } from 'zod';
-
-type LoginForm = z.infer<typeof LoginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
-    resolver: zodResolver(LoginSchema),
-  });
-
-  async function onSubmit(data: LoginForm) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError('');
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.currentTarget);
+
     const result = await signIn('credentials', {
-      email: data.email,
-      password: data.password,
+      email: formData.get('email'),
+      password: formData.get('password'),
       redirect: false,
     });
 
     if (result?.error) {
       setError('Invalid email or password. Too many attempts will lock you out for 15 minutes.');
+      setIsSubmitting(false);
     } else {
       router.push('/dashboard');
     }
@@ -49,21 +46,19 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-sm">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
           )}
 
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@example.com" {...register('email')} />
-            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" {...register('password')} />
-            {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+            <Input id="password" name="password" type="password" placeholder="••••••••" required />
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

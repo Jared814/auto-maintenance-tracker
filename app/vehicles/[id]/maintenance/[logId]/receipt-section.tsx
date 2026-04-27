@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import imageCompression from 'browser-image-compression';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, Image } from 'lucide-react';
+import { deleteReceiptAction, generateUploadUrlAction, saveReceiptAction } from '@/lib/actions/receipts';
 
 interface Receipt {
   id: string;
@@ -37,17 +38,11 @@ export function ReceiptSection({ logId, initialReceipts }: Props) {
       });
 
       // Get presigned URL
-      const urlRes = await fetch('/api/receipts/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: compressed.type || 'image/jpeg',
-          logId,
-        }),
-      });
-      if (!urlRes.ok) throw new Error('Failed to get upload URL');
-      const { uploadUrl, publicUrl, r2Key } = await urlRes.json();
+      const { uploadUrl, publicUrl, r2Key } = await generateUploadUrlAction(
+        file.name,
+        compressed.type || 'image/jpeg',
+        logId
+      );
 
       // Upload to R2
       const putRes = await fetch(uploadUrl, {
@@ -58,21 +53,15 @@ export function ReceiptSection({ logId, initialReceipts }: Props) {
       if (!putRes.ok) throw new Error('Failed to upload file');
 
       // Save receipt record
-      const saveRes = await fetch('/api/receipts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          maintenance_log_id: logId,
-          r2_key: r2Key,
-          r2_url: publicUrl,
-          file_name: file.name,
-          file_type: file.type,
-        }),
+      const receipt = await saveReceiptAction({
+        maintenance_log_id: logId,
+        r2_key: r2Key,
+        r2_url: publicUrl,
+        file_name: file.name,
+        file_type: file.type,
       });
-      if (!saveRes.ok) throw new Error('Failed to save receipt record');
-
-      const receipt = await saveRes.json();
-      setReceipts((prev) => [...prev, receipt]);
+      
+      setReceipts((prev) => [...prev, receipt as Receipt]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
@@ -83,9 +72,11 @@ export function ReceiptSection({ logId, initialReceipts }: Props) {
 
   async function handleDelete(receiptId: string) {
     if (!confirm('Delete this receipt?')) return;
-    const res = await fetch(`/api/receipts/${receiptId}`, { method: 'DELETE' });
-    if (res.ok) {
+    try {
+      await deleteReceiptAction(receiptId);
       setReceipts((prev) => prev.filter((r) => r.id !== receiptId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete receipt');
     }
   }
 

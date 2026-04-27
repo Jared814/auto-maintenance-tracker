@@ -32,7 +32,7 @@ export default async function MaintenanceTypesPage() {
           Default types apply to all accounts. You can add custom types for your account.
         </p>
 
-        <MaintenanceTypesClient initialTypes={types} />
+        <MaintenanceTypesClient types={types} />
       </div>
     </AppShell>
   );

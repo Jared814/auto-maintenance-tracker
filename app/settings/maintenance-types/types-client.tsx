@@ -1,14 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useActionState, useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { CreateMaintenanceTypeSchema, type CreateMaintenanceType } from '@/lib/schemas';
 import { Plus, Trash2 } from 'lucide-react';
+import { addMaintenanceTypeAction, deleteMaintenanceTypeAction } from '@/lib/actions/types';
 
 interface MaintenanceType {
   id: string;
@@ -22,48 +21,43 @@ interface MaintenanceType {
 
 const CATEGORIES = ['engine', 'transmission', 'brakes', 'tires', 'fluids', 'filters', 'belts', 'electrical', 'other'];
 
-export function MaintenanceTypesClient({ initialTypes }: { initialTypes: MaintenanceType[] }) {
-  const [types, setTypes] = useState<MaintenanceType[]>(initialTypes);
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" size="sm" disabled={pending}>
+      {pending ? 'Saving…' : 'Add Type'}
+    </Button>
+  );
+}
+
+function DeleteButton({ id }: { id: string }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      onClick={async () => {
+        if (confirm('Delete this maintenance type?')) {
+          await deleteMaintenanceTypeAction(id);
+        }
+      }}
+    >
+      <Trash2 className="size-3.5" />
+    </Button>
+  );
+}
+
+export function MaintenanceTypesClient({ types }: { types: MaintenanceType[] }) {
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState('');
-
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CreateMaintenanceType>({
-    resolver: zodResolver(CreateMaintenanceTypeSchema) as never,
-    defaultValues: { category: 'engine' },
-  });
-
-  async function onSubmit(data: CreateMaintenanceType) {
-    setError('');
-    try {
-      const res = await fetch('/api/maintenance-types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        const json = await res.json();
-        setError(json.error ?? 'Failed to create type');
-        return;
-      }
-
-      const type = await res.json();
-      setTypes((prev) => [...prev, type]);
-      reset({ category: 'engine' });
-      setAdding(false);
-    } catch {
-      setError('Something went wrong.');
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Delete this maintenance type?')) return;
-    const res = await fetch(`/api/maintenance-types/${id}`, { method: 'DELETE' });
-    if (res.ok) setTypes((prev) => prev.filter((t) => t.id !== id));
-  }
+  const [state, formAction] = useActionState(addMaintenanceTypeAction, null);
 
   const customTypes = types.filter((t) => !t.is_default);
   const defaultTypes = types.filter((t) => t.is_default);
+
+  // Automatically close form on successful submission
+  if (state?.success && adding) {
+    setAdding(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -80,18 +74,17 @@ export function MaintenanceTypesClient({ initialTypes }: { initialTypes: Mainten
         {adding && (
           <Card className="mb-4">
             <CardContent className="p-4">
-              <form onSubmit={handleSubmit(onSubmit as never)} className="space-y-3">
-                {error && <p className="text-xs text-destructive">{error}</p>}
+              <form action={formAction} className="space-y-3">
+                {state?.error && <p className="text-xs text-destructive">{state.error}</p>}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="name">Name *</Label>
-                    <Input id="name" placeholder="e.g. Windshield Chip Repair" {...register('name')} />
-                    {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                    <Input id="name" name="name" placeholder="e.g. Windshield Chip Repair" required />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="category">Category *</Label>
-                    <select id="category" {...register('category')} className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm">
+                    <select id="category" name="category" defaultValue="engine" className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm">
                       {CATEGORIES.map((c) => (
                         <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                       ))}
@@ -102,18 +95,16 @@ export function MaintenanceTypesClient({ initialTypes }: { initialTypes: Mainten
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="default_interval_miles">Interval (miles)</Label>
-                    <Input id="default_interval_miles" type="number" placeholder="5000" {...register('default_interval_miles', { valueAsNumber: true })} />
+                    <Input id="default_interval_miles" name="default_interval_miles" type="number" placeholder="5000" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="default_interval_months">Interval (months)</Label>
-                    <Input id="default_interval_months" type="number" placeholder="6" {...register('default_interval_months', { valueAsNumber: true })} />
+                    <Input id="default_interval_months" name="default_interval_months" type="number" placeholder="6" />
                   </div>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving…' : 'Add Type'}
-                  </Button>
+                  <SubmitButton />
                   <Button type="button" size="sm" variant="outline" onClick={() => setAdding(false)}>
                     Cancel
                   </Button>
@@ -142,13 +133,7 @@ export function MaintenanceTypesClient({ initialTypes }: { initialTypes: Mainten
                       ].filter(Boolean).join(' / ')}
                     </span>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleDelete(type.id)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                  <DeleteButton id={type.id} />
                 </div>
               </div>
             ))}
