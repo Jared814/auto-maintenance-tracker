@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull, or, notInArray } from 'drizzle-orm';
 import { db, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, accountDisabledTypes } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, accountDisabledTypes, accountTypeOverrides } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -183,22 +183,46 @@ export async function deleteVehicle(id: string, accountId: string) {
 
 // ---- MAINTENANCE TYPES ----
 
+function applyOverrides<T extends { id: string; default_interval_miles: number | null; default_interval_months: number | null }>(
+  types: T[],
+  overrides: { type_id: string; interval_miles: number | null; interval_months: number | null }[]
+): T[] {
+  const map = new Map(overrides.map((o) => [o.type_id, o]));
+  return types.map((t) => {
+    const o = map.get(t.id);
+    if (!o) return t;
+    return {
+      ...t,
+      default_interval_miles: o.interval_miles ?? t.default_interval_miles,
+      default_interval_months: o.interval_months ?? t.default_interval_months,
+    };
+  });
+}
+
 export async function getMaintenanceTypes(accountId: string) {
-  const disabled = await db.select({ type_id: accountDisabledTypes.type_id })
-    .from(accountDisabledTypes)
-    .where(eq(accountDisabledTypes.account_id, accountId));
+  const [disabled, overrides] = await Promise.all([
+    db.select({ type_id: accountDisabledTypes.type_id })
+      .from(accountDisabledTypes)
+      .where(eq(accountDisabledTypes.account_id, accountId)),
+    db.select().from(accountTypeOverrides).where(eq(accountTypeOverrides.account_id, accountId)),
+  ]);
   const disabledIds = disabled.map((r) => r.type_id);
 
   const baseCondition = or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!;
-  if (disabledIds.length === 0) {
-    return db.select().from(maintenanceTypes).where(baseCondition);
-  }
-  return db.select().from(maintenanceTypes).where(and(baseCondition, notInArray(maintenanceTypes.id, disabledIds)));
+  const types = disabledIds.length === 0
+    ? await db.select().from(maintenanceTypes).where(baseCondition)
+    : await db.select().from(maintenanceTypes).where(and(baseCondition, notInArray(maintenanceTypes.id, disabledIds)));
+
+  return applyOverrides(types, overrides);
 }
 
 export async function getMaintenanceTypesAll(accountId: string) {
-  return db.select().from(maintenanceTypes)
-    .where(or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!);
+  const [types, overrides] = await Promise.all([
+    db.select().from(maintenanceTypes)
+      .where(or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!),
+    db.select().from(accountTypeOverrides).where(eq(accountTypeOverrides.account_id, accountId)),
+  ]);
+  return applyOverrides(types, overrides);
 }
 
 export async function getDisabledTypeIds(accountId: string): Promise<string[]> {
@@ -206,6 +230,20 @@ export async function getDisabledTypeIds(accountId: string): Promise<string[]> {
     .from(accountDisabledTypes)
     .where(eq(accountDisabledTypes.account_id, accountId));
   return rows.map((r) => r.type_id);
+}
+
+export async function getTypeOverrides(accountId: string) {
+  const rows = await db.select().from(accountTypeOverrides).where(eq(accountTypeOverrides.account_id, accountId));
+  return new Map(rows.map((r) => [r.type_id, { miles: r.interval_miles, months: r.interval_months }]));
+}
+
+export async function upsertTypeOverride(accountId: string, typeId: string, intervalMiles: number | null, intervalMonths: number | null) {
+  await db.insert(accountTypeOverrides)
+    .values({ account_id: accountId, type_id: typeId, interval_miles: intervalMiles, interval_months: intervalMonths })
+    .onConflictDoUpdate({
+      target: [accountTypeOverrides.account_id, accountTypeOverrides.type_id],
+      set: { interval_miles: intervalMiles, interval_months: intervalMonths },
+    });
 }
 
 export async function disableMaintenanceType(accountId: string, typeId: string) {

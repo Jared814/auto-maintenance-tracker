@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getMaintenanceTypesAll, getDisabledTypeIds } from '@/lib/db';
+import { getMaintenanceTypesAll, getDisabledTypeIds, getTypeOverrides } from '@/lib/db';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
@@ -13,10 +13,12 @@ export default async function MaintenanceTypesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const [allTypes, disabledIds] = await Promise.all([
+  const [allTypes, disabledIds, overridesMap] = await Promise.all([
     getMaintenanceTypesAll(session.user.id),
     getDisabledTypeIds(session.user.id),
+    getTypeOverrides(session.user.id),
   ]);
+  const overrides = Object.fromEntries(overridesMap);
 
   return (
     <AppShell>
@@ -33,7 +35,7 @@ export default async function MaintenanceTypesPage() {
           Toggle types on or off to control what the app tracks. Add custom types for your account.
         </p>
 
-        <MaintenanceTypesClient types={allTypes} disabledIds={disabledIds} />
+        <MaintenanceTypesClient types={allTypes} disabledIds={disabledIds} overrides={overrides} />
       </div>
     </AppShell>
   );

@@ -72,6 +72,15 @@ export const fuelLogs = pgTable('fuel_logs', {
   index('idx_fuel_logs_vehicle_date').on(table.vehicle_id, table.filled_at),
 ]);
 
+export const accountTypeOverrides = pgTable('account_type_overrides', {
+  account_id: text('account_id').references(() => accounts.id).notNull(),
+  type_id: text('type_id').references(() => maintenanceTypes.id).notNull(),
+  interval_miles: integer('interval_miles'),
+  interval_months: integer('interval_months'),
+}, (table) => [
+  primaryKey({ columns: [table.account_id, table.type_id] }),
+]);
+
 export const accountDisabledTypes = pgTable('account_disabled_types', {
   account_id: text('account_id').references(() => accounts.id).notNull(),
   type_id: text('type_id').references(() => maintenanceTypes.id).notNull(),

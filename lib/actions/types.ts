@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceType, deleteMaintenanceType, updateMaintenanceType, disableMaintenanceType, enableMaintenanceType } from '@/lib/db';
+import { createMaintenanceType, deleteMaintenanceType, updateMaintenanceType, disableMaintenanceType, enableMaintenanceType, upsertTypeOverride } from '@/lib/db';
 import { CreateMaintenanceTypeSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import type { ActionState } from '@/lib/actions/state';
@@ -89,5 +89,13 @@ export async function toggleMaintenanceTypeAction(typeId: string, enabled: boole
   } else {
     await disableMaintenanceType(session.user.id, typeId);
   }
+  revalidatePath('/settings/maintenance-types');
+}
+
+export async function setTypeIntervalAction(typeId: string, miles: number | null, months: number | null) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await upsertTypeOverride(session.user.id, typeId, miles, months);
   revalidatePath('/settings/maintenance-types');
 }
