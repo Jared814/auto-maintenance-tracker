@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Wrench, Plus, X } from 'lucide-react';
+import { Wrench, Plus, X, Fuel } from 'lucide-react';
 import { statusBadgeClass, statusLabel, type MaintenanceStatus } from '@/lib/maintenance-status';
 import { formatDate, formatMileage } from '@/lib/utils';
 import { getToday } from '@/lib/dates';
@@ -41,10 +41,12 @@ interface SummaryData {
   statusByType: StatusItem[];
 }
 
+type ActiveForm = 'service' | 'fuel' | null;
+
 export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [activeForm, setActiveForm] = useState<ActiveForm>(null);
 
   const loadData = useCallback(() => {
     setLoading(true);
@@ -99,23 +101,50 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
               )}
             </div>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="shrink-0 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1.5 rounded-lg"
-          >
-            {showForm ? <X className="size-4" /> : <Plus className="size-4" />}
-            {showForm ? 'Cancel' : 'Log Service'}
-          </button>
+          <div className="flex gap-2 shrink-0">
+            {activeForm ? (
+              <button
+                onClick={() => setActiveForm(null)}
+                className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+              >
+                <X className="size-4" />
+                Cancel
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setActiveForm('fuel')}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+                >
+                  <Fuel className="size-4" />
+                  Log Fuel
+                </button>
+                <button
+                  onClick={() => setActiveForm('service')}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+                >
+                  <Plus className="size-4" />
+                  Log Service
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="p-4 max-w-lg mx-auto space-y-4">
-        {/* Log Service form — PIN required */}
-        {showForm && (
+        {activeForm === 'service' && (
           <LogServiceForm
             qrSlug={qrSlug}
             types={allTypes}
-            onSuccess={() => { setShowForm(false); loadData(); }}
+            onSuccess={() => { setActiveForm(null); loadData(); }}
+          />
+        )}
+        {activeForm === 'fuel' && (
+          <LogFuelForm
+            qrSlug={qrSlug}
+            vehicleUnits={vehicle.units}
+            onSuccess={() => { setActiveForm(null); loadData(); }}
           />
         )}
 
@@ -176,6 +205,166 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ---- Log Fuel Form ----
+
+interface LogFuelFormProps {
+  qrSlug: string;
+  vehicleUnits: string;
+  onSuccess: () => void;
+}
+
+function LogFuelForm({ qrSlug, vehicleUnits, onSuccess }: LogFuelFormProps) {
+  const [pin, setPin] = useState('');
+  const [date, setDate] = useState(getToday());
+  const [mileage, setMileage] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
+  const [pricePerUnit, setPricePerUnit] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pin || !date || !mileage || !quantity) return;
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/public/vehicle/${qrSlug}/fuel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin,
+          filled_at: date,
+          mileage: Number(mileage),
+          fuel_quantity: Number(quantity),
+          fuel_unit: unit,
+          price_per_unit: pricePerUnit || null,
+          notes: notes || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        setError(json.error === 'Invalid PIN' ? 'Incorrect PIN.' : (json.error ?? 'Failed to save'));
+        return;
+      }
+
+      onSuccess();
+    } catch {
+      setError('Something went wrong.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const inputClass = 'h-9 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30';
+  const unitLabel = vehicleUnits === 'miles' ? 'MPG' : 'L/100km';
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <h2 className="font-semibold text-sm">Log Fuel Fill-Up</h2>
+      <p className="text-xs text-muted-foreground">Fill-ups are used to calculate {unitLabel}.</p>
+
+      {error && (
+        <p className="text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+      )}
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">PIN *</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="\d*"
+          maxLength={8}
+          placeholder="Enter vehicle PIN"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          className={`${inputClass} tracking-widest text-center`}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Date *</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} required />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Odometer *</label>
+          <input type="number" placeholder="65000" value={mileage} onChange={(e) => setMileage(e.target.value)} className={inputClass} required />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Fuel Added *</label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            step="0.001"
+            min="0"
+            placeholder={unit === 'gallons' ? '12.5' : '47.3'}
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className={`${inputClass} flex-1`}
+            required
+          />
+          <div className="flex border border-input rounded-lg overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={() => setUnit('gallons')}
+              className={`px-3 py-1.5 text-sm transition-colors ${unit === 'gallons' ? 'bg-primary text-primary-foreground' : 'bg-transparent hover:bg-muted'}`}
+            >
+              gal
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnit('liters')}
+              className={`px-3 py-1.5 text-sm transition-colors ${unit === 'liters' ? 'bg-primary text-primary-foreground' : 'bg-transparent hover:bg-muted'}`}
+            >
+              L
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">
+          Price per {unit === 'gallons' ? 'gallon' : 'liter'} (optional)
+        </label>
+        <input
+          type="text"
+          placeholder="3.49"
+          value={pricePerUnit}
+          onChange={(e) => setPricePerUnit(e.target.value)}
+          className={inputClass}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Notes (optional)</label>
+        <textarea
+          rows={2}
+          placeholder="Optional notes…"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 resize-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting || !pin || !date || !mileage || !quantity}
+        className="w-full h-9 bg-primary text-primary-foreground text-sm font-medium rounded-lg disabled:opacity-50 transition-opacity"
+      >
+        {submitting ? 'Saving…' : 'Save Fill-Up'}
+      </button>
+    </form>
   );
 }
 
