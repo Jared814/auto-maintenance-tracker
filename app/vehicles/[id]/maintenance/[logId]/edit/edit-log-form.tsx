@@ -2,23 +2,15 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { useFormStatus } from 'react-dom';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { SubmitButton } from '@/components/submit-button';
 import { ChevronLeft, Trash2 } from 'lucide-react';
 import { deleteMaintenanceLogAction, updateMaintenanceLogAction } from '@/lib/actions/maintenance';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Saving…' : 'Save Changes'}
-    </Button>
-  );
-}
+import type { ActionState } from '@/lib/actions/state';
 
 function DeleteButton({ id }: { id: string }) {
   return (
@@ -40,7 +32,7 @@ function DeleteButton({ id }: { id: string }) {
 
 export function EditLogForm({ vehicleId, log }: { vehicleId: string; log: any }) {
   const updateLogWithId = updateMaintenanceLogAction.bind(null, log.id);
-  const [state, formAction] = useActionState(updateLogWithId, null);
+  const [state, formAction] = useActionState<ActionState, FormData>(updateLogWithId, null);
 
   return (
     <AppShell>
@@ -55,7 +47,7 @@ export function EditLogForm({ vehicleId, log }: { vehicleId: string; log: any })
         </div>
 
         <form action={formAction} className="space-y-4">
-          {state?.error && (
+          {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
           )}
 
@@ -101,7 +93,7 @@ export function EditLogForm({ vehicleId, log }: { vehicleId: string; log: any })
             <Link href={`/vehicles/${vehicleId}/maintenance/${log.id}`}>
               <Button type="button" variant="outline">Cancel</Button>
             </Link>
-            <SubmitButton />
+            <SubmitButton label="Save Changes" pendingLabel="Saving…" />
             <DeleteButton id={log.id} />
           </div>
         </form>

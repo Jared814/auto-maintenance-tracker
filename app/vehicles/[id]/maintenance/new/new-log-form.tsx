@@ -2,15 +2,16 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { useFormStatus } from 'react-dom';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { SubmitButton } from '@/components/submit-button';
 import { ChevronLeft } from 'lucide-react';
 import { getToday } from '@/lib/dates';
 import { addMaintenanceLogAction } from '@/lib/actions/maintenance';
+import type { ActionState } from '@/lib/actions/state';
 
 interface MaintenanceType {
   id: string;
@@ -18,18 +19,9 @@ interface MaintenanceType {
   category: string;
 }
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Saving…' : 'Save Record'}
-    </Button>
-  );
-}
-
 export function NewLogForm({ vehicleId, types }: { vehicleId: string; types: MaintenanceType[] }) {
   const addLogWithVehicleId = addMaintenanceLogAction.bind(null, vehicleId);
-  const [state, formAction] = useActionState(addLogWithVehicleId, null);
+  const [state, formAction] = useActionState<ActionState, FormData>(addLogWithVehicleId, null);
 
   const grouped = types.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
     if (!acc[t.category]) acc[t.category] = [];
@@ -50,7 +42,7 @@ export function NewLogForm({ vehicleId, types }: { vehicleId: string; types: Mai
         </div>
 
         <form action={formAction} className="space-y-4">
-          {state?.error && (
+          {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
           )}
 
@@ -115,7 +107,7 @@ export function NewLogForm({ vehicleId, types }: { vehicleId: string; types: Mai
             <Link href={`/vehicles/${vehicleId}/maintenance`}>
               <Button type="button" variant="outline">Cancel</Button>
             </Link>
-            <SubmitButton />
+            <SubmitButton label="Save Record" pendingLabel="Saving…" />
           </div>
         </form>
       </div>

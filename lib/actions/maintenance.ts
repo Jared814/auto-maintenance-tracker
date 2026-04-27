@@ -5,6 +5,7 @@ import { createMaintenanceLog, deleteMaintenanceLog, getMaintenanceLogById, getV
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { ActionState } from '@/lib/actions/state';
 
 async function authorizeLog(id: string, accountId: string) {
   const log = await getMaintenanceLogById(id);
@@ -14,7 +15,7 @@ async function authorizeLog(id: string, accountId: string) {
   return log;
 }
 
-export async function addMaintenanceLogAction(vehicleId: string, prevState: any, formData: FormData) {
+export async function addMaintenanceLogAction(vehicleId: string, prevState: ActionState, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };
@@ -60,7 +61,7 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: any,
   redirect(`/vehicles/${vehicleId}/maintenance`);
 }
 
-export async function updateMaintenanceLogAction(id: string, prevState: any, formData: FormData) {
+export async function updateMaintenanceLogAction(id: string, prevState: ActionState, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };

@@ -1,34 +1,29 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { useFormStatus } from 'react-dom';
 import { Wrench } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SubmitButton } from '@/components/submit-button';
 import { registerAccountAction } from '@/lib/actions/auth';
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? 'Creating account…' : 'Create account'}
-    </Button>
-  );
-}
+import type { ActionState } from '@/lib/actions/state';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [state, formAction] = useActionState(registerAccountAction, null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const [state, formAction] = useActionState<ActionState, FormData>(registerAccountAction, null);
 
   useEffect(() => {
-    if (state?.success) {
-      signIn('credentials', { email: state.email, password: state.password, redirect: false }).then(() => {
-        router.push('/dashboard');
-      });
+    if (state && 'success' in state) {
+      signIn('credentials', {
+        email: emailRef.current?.value,
+        password: passwordRef.current?.value,
+        redirect: false,
+      }).then(() => router.push('/dashboard'));
     }
   }, [state, router]);
 
@@ -44,7 +39,7 @@ export default function RegisterPage() {
         </div>
 
         <form action={formAction} className="space-y-4">
-          {state?.error && (
+          {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
           )}
 
@@ -55,15 +50,15 @@ export default function RegisterPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+            <Input ref={emailRef} id="email" name="email" type="email" placeholder="you@example.com" required />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
+            <Input ref={passwordRef} id="password" name="password" type="password" placeholder="Minimum 8 characters" required />
           </div>
 
-          <SubmitButton />
+          <SubmitButton label="Create account" pendingLabel="Creating account…" className="w-full" />
         </form>
 
         <p className="text-center text-sm text-muted-foreground">

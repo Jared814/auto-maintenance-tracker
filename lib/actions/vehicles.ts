@@ -7,8 +7,9 @@ import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { ActionState } from '@/lib/actions/state';
 
-export async function addVehicleAction(prevState: any, formData: FormData) {
+export async function addVehicleAction(prevState: ActionState, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };
@@ -58,7 +59,7 @@ export async function addVehicleAction(prevState: any, formData: FormData) {
   redirect('/vehicles');
 }
 
-export async function updateVehicleAction(id: string, prevState: any, formData: FormData) {
+export async function updateVehicleAction(id: string, prevState: ActionState, formData: FormData) {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };

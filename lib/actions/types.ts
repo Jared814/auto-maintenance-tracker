@@ -4,8 +4,9 @@ import { auth } from '@/auth';
 import { createMaintenanceType, deleteMaintenanceType, updateMaintenanceType } from '@/lib/db';
 import { CreateMaintenanceTypeSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
+import type { ActionState } from '@/lib/actions/state';
 
-export async function addMaintenanceTypeAction(prevState: any, formData: FormData) {
+export async function addMaintenanceTypeAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };
@@ -39,7 +40,7 @@ export async function addMaintenanceTypeAction(prevState: any, formData: FormDat
   }
 }
 
-export async function updateMaintenanceTypeAction(id: string, prevState: any, formData: FormData) {
+export async function updateMaintenanceTypeAction(id: string, prevState: ActionState, formData: FormData): Promise<ActionState> {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: 'Unauthorized' };

@@ -3,8 +3,9 @@
 import bcrypt from 'bcryptjs';
 import { createAccount, getAccountByEmail } from '@/lib/db';
 import { CreateAccountSchema } from '@/lib/schemas';
+import type { ActionState } from '@/lib/actions/state';
 
-export async function registerAccountAction(prevState: any, formData: FormData) {
+export async function registerAccountAction(prevState: ActionState, formData: FormData): Promise<ActionState> {
   const rawData = {
     name: formData.get('name'),
     email: formData.get('email'),
@@ -29,7 +30,7 @@ export async function registerAccountAction(prevState: any, formData: FormData) 
       passwordHash,
     });
 
-    return { success: true, email: parsed.data.email, password: parsed.data.password };
+    return { success: true };
   } catch (error) {
     console.error('[register POST]', error);
     return { error: 'Failed to create account' };

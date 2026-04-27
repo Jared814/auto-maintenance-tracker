@@ -1,13 +1,14 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { SubmitButton } from '@/components/submit-button';
 import { Plus, Trash2 } from 'lucide-react';
 import { addMaintenanceTypeAction, deleteMaintenanceTypeAction } from '@/lib/actions/types';
+import type { ActionState } from '@/lib/actions/state';
 
 interface MaintenanceType {
   id: string;
@@ -20,15 +21,6 @@ interface MaintenanceType {
 }
 
 const CATEGORIES = ['engine', 'transmission', 'brakes', 'tires', 'fluids', 'filters', 'belts', 'electrical', 'other'];
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="sm" disabled={pending}>
-      {pending ? 'Saving…' : 'Add Type'}
-    </Button>
-  );
-}
 
 function DeleteButton({ id }: { id: string }) {
   return (
@@ -49,13 +41,13 @@ function DeleteButton({ id }: { id: string }) {
 
 export function MaintenanceTypesClient({ types }: { types: MaintenanceType[] }) {
   const [adding, setAdding] = useState(false);
-  const [state, formAction] = useActionState(addMaintenanceTypeAction, null);
+  const [state, formAction] = useActionState<ActionState, FormData>(addMaintenanceTypeAction, null);
 
   const customTypes = types.filter((t) => !t.is_default);
   const defaultTypes = types.filter((t) => t.is_default);
 
   // Automatically close form on successful submission
-  if (state?.success && adding) {
+  if (state && 'success' in state && adding) {
     setAdding(false);
   }
 
@@ -75,7 +67,7 @@ export function MaintenanceTypesClient({ types }: { types: MaintenanceType[] }) 
           <Card className="mb-4">
             <CardContent className="p-4">
               <form action={formAction} className="space-y-3">
-                {state?.error && <p className="text-xs text-destructive">{state.error}</p>}
+                {state && 'error' in state && <p className="text-xs text-destructive">{state.error}</p>}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -104,7 +96,7 @@ export function MaintenanceTypesClient({ types }: { types: MaintenanceType[] }) 
                 </div>
 
                 <div className="flex gap-2">
-                  <SubmitButton />
+                  <SubmitButton label="Add Type" pendingLabel="Saving…" />
                   <Button type="button" size="sm" variant="outline" onClick={() => setAdding(false)}>
                     Cancel
                   </Button>
