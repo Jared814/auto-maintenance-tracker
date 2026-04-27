@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Wrench } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Wrench, Plus, X } from 'lucide-react';
 import { statusBadgeClass, statusLabel, type MaintenanceStatus } from '@/lib/maintenance-status';
 import { formatDate, formatMileage } from '@/lib/utils';
+import { getToday } from '@/lib/dates';
 
 const CATEGORY_LABELS: Record<string, string> = {
   engine: 'Engine', transmission: 'Transmission', brakes: 'Brakes',
@@ -11,8 +12,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   belts: 'Belts', electrical: 'Electrical', other: 'Other',
 };
 
+interface MaintenanceType {
+  id: string;
+  name: string;
+  category: string;
+}
+
 interface StatusItem {
-  type: { id: string; name: string; category: string };
+  type: MaintenanceType;
   status: MaintenanceStatus;
   lastServiceDate?: string;
   lastServiceMileage?: number;
@@ -37,13 +44,17 @@ interface SummaryData {
 export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true);
     fetch(`/api/public/vehicle/${qrSlug}`)
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
   }, [qrSlug]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   if (loading) {
     return (
@@ -56,8 +67,8 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
   if (!data) return null;
 
   const { vehicle, statusByType } = data;
+  const allTypes = statusByType.map((s) => s.type);
 
-  // Group by category
   const grouped = Object.entries(
     statusByType.reduce<Record<string, StatusItem[]>>((acc, item) => {
       const cat = item.type.category;
@@ -76,22 +87,40 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4">
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <Wrench className="size-5 shrink-0" />
-          <div>
-            <h1 className="font-bold text-lg">{vehicle.name}</h1>
-            {(vehicle.make || vehicle.year) && (
-              <p className="text-primary-foreground/80 text-sm">
-                {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ')}
-              </p>
-            )}
+        <div className="flex items-center justify-between gap-2 max-w-lg mx-auto">
+          <div className="flex items-center gap-2 min-w-0">
+            <Wrench className="size-5 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="font-bold text-lg leading-tight">{vehicle.name}</h1>
+              {(vehicle.make || vehicle.year) && (
+                <p className="text-primary-foreground/80 text-sm">
+                  {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ')}
+                </p>
+              )}
+            </div>
           </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="shrink-0 flex items-center gap-1.5 bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+          >
+            {showForm ? <X className="size-4" /> : <Plus className="size-4" />}
+            {showForm ? 'Cancel' : 'Log Service'}
+          </button>
         </div>
       </div>
 
       <div className="p-4 max-w-lg mx-auto space-y-4">
+        {/* Log Service form — PIN required */}
+        {showForm && (
+          <LogServiceForm
+            qrSlug={qrSlug}
+            types={allTypes}
+            onSuccess={() => { setShowForm(false); loadData(); }}
+          />
+        )}
+
         {/* Summary stats */}
-        <div className="flex gap-3 text-sm">
+        <div className="flex flex-wrap gap-2 text-sm">
           {vehicle.current_mileage != null && (
             <div className="bg-muted rounded-lg px-3 py-2">
               <span className="text-muted-foreground">Mileage: </span>
@@ -124,9 +153,7 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
                     {lastServiceDate && (
                       <p className="text-xs text-muted-foreground">
                         Last: {formatDate(lastServiceDate)}
-                        {lastServiceMileage != null
-                          ? ` @ ${formatMileage(lastServiceMileage, vehicle.units)}`
-                          : ''}
+                        {lastServiceMileage != null ? ` @ ${formatMileage(lastServiceMileage, vehicle.units)}` : ''}
                       </p>
                     )}
                     {(nextDueMileage || nextDueDate) && (
@@ -135,15 +162,11 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
                         {[
                           nextDueMileage ? formatMileage(nextDueMileage, vehicle.units) : null,
                           nextDueDate ? formatDate(nextDueDate) : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' or ')}
+                        ].filter(Boolean).join(' or ')}
                       </p>
                     )}
                   </div>
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${statusBadgeClass(status)}`}
-                  >
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${statusBadgeClass(status)}`}>
                     {statusLabel(status)}
                   </span>
                 </div>
@@ -153,5 +176,149 @@ export function MaintenanceSummary({ qrSlug }: { qrSlug: string }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ---- Log Service Form ----
+
+interface LogServiceFormProps {
+  qrSlug: string;
+  types: MaintenanceType[];
+  onSuccess: () => void;
+}
+
+function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
+  const [pin, setPin] = useState('');
+  const [typeId, setTypeId] = useState('');
+  const [date, setDate] = useState(getToday());
+  const [mileage, setMileage] = useState('');
+  const [price, setPrice] = useState('');
+  const [shop, setShop] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const grouped = types.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
+    if (!acc[t.category]) acc[t.category] = [];
+    acc[t.category].push(t);
+    return acc;
+  }, {});
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pin || !typeId || !date || !mileage) return;
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/public/vehicle/${qrSlug}/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin,
+          maintenance_type_id: typeId,
+          serviced_at: date,
+          mileage_at_service: Number(mileage),
+          price_paid: price || null,
+          shop: shop || null,
+          notes: notes || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const json = await res.json();
+        setError(json.error === 'Invalid PIN' ? 'Incorrect PIN.' : (json.error ?? 'Failed to save'));
+        return;
+      }
+
+      onSuccess();
+    } catch {
+      setError('Something went wrong.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const inputClass = 'h-9 w-full rounded-lg border border-input bg-white px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30';
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <h2 className="font-semibold text-sm">Log New Service</h2>
+
+      {error && (
+        <p className="text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
+      )}
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">PIN *</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="\d*"
+          maxLength={8}
+          placeholder="Enter vehicle PIN"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          className={`${inputClass} tracking-widest text-center`}
+          required
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Service Type *</label>
+        <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={inputClass} required>
+          <option value="">Select type…</option>
+          {Object.entries(grouped).map(([cat, catTypes]) => (
+            <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
+              {catTypes.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Date *</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} required />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Mileage *</label>
+          <input type="number" placeholder="65000" value={mileage} onChange={(e) => setMileage(e.target.value)} className={inputClass} required />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Price</label>
+          <input type="text" placeholder="49.99" value={price} onChange={(e) => setPrice(e.target.value)} className={inputClass} />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Shop</label>
+          <input type="text" placeholder="Jiffy Lube" value={shop} onChange={(e) => setShop(e.target.value)} className={inputClass} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">Notes</label>
+        <textarea
+          rows={2}
+          placeholder="Optional notes…"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 resize-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={submitting || !pin || !typeId || !date || !mileage}
+        className="w-full h-9 bg-primary text-primary-foreground text-sm font-medium rounded-lg disabled:opacity-50 transition-opacity"
+      >
+        {submitting ? 'Saving…' : 'Save Service Record'}
+      </button>
+    </form>
   );
 }
