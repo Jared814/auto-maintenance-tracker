@@ -6,7 +6,7 @@ import * as schema from './schema';
 
 const client = postgres(
   process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/automotivemaint',
-  { idle_timeout: 20, max_lifetime: 60 * 30, connect_timeout: 30, max: 5 }
+  { idle_timeout: 20, max_lifetime: 60 * 30, connect_timeout: 30, max: 2 }
 );
 
 export const db = drizzle(client, { schema });

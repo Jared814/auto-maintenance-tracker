@@ -7,6 +7,15 @@ const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
 
+function pruneAttempts() {
+  const now = Date.now();
+  for (const [ip, data] of loginAttempts.entries()) {
+    if (now - data.lastAttempt > LOCKOUT_TIME) {
+      loginAttempts.delete(ip);
+    }
+  }
+}
+
 export const authConfig: NextAuthConfig = {
   pages: { signIn: '/login' },
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 7 }, // 7 days
@@ -18,6 +27,7 @@ export const authConfig: NextAuthConfig = {
         password: { type: 'password' },
       },
       async authorize(credentials, request) {
+        pruneAttempts();
         const ip = request.headers?.get('x-forwarded-for') ?? 'anonymous';
         const now = Date.now();
 
