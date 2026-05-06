@@ -19,9 +19,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:w-56 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-sidebar z-10">
-        <div className="flex h-14 items-center gap-2 px-4 border-b border-border">
-          <Wrench className="size-5 text-primary" />
-          <span className="font-semibold text-sm">AutoMaint</span>
+        <div className="flex h-14 items-center gap-2 px-4 border-b border-sidebar-border">
+          <Wrench className="size-5 text-sidebar-primary" />
+          <span className="font-semibold text-sm text-sidebar-foreground">AutoMaint</span>
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {navItems.map((item) => {
@@ -31,10 +31,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+                  'flex items-center gap-2.5 py-2 rounded-lg text-sm transition-colors border-l-2',
                   active
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    ? 'bg-white/10 text-white font-medium border-sidebar-primary pl-[10px] pr-3'
+                    : 'text-sidebar-foreground/80 hover:bg-white/8 hover:text-white border-transparent pl-3 pr-3'
                 )}
               >
                 <item.icon className="size-4 shrink-0" />
@@ -43,10 +43,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="p-2 border-t border-border">
+        <div className="p-2 border-t border-sidebar-border">
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm w-full text-sidebar-foreground/80 hover:bg-white/8 hover:text-white transition-colors"
           >
             <LogOut className="size-4 shrink-0" />
             Sign out

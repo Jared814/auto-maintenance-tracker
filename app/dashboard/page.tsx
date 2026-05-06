@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Car, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatMileage } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -60,22 +61,29 @@ export default async function DashboardPage() {
         </div>
 
         {vehicles.length === 0 ? (
-          <div className="text-center py-16">
-            <Car className="size-12 text-muted-foreground mx-auto mb-3" />
-            <p className="font-medium">No vehicles yet</p>
-            <p className="text-sm text-muted-foreground mb-4">Add your first vehicle to start tracking maintenance</p>
-            <Link href="/vehicles/new">
-              <Button>
-                <Plus className="size-4" />
-                Add Vehicle
-              </Button>
-            </Link>
-          </div>
+          <Card className="text-center py-16 max-w-sm mx-auto">
+            <CardContent className="flex flex-col items-center gap-3 pt-0">
+              <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Car className="size-8 text-primary" />
+              </div>
+              <p className="font-medium">No vehicles yet</p>
+              <p className="text-sm text-muted-foreground">Add your first vehicle to start tracking maintenance</p>
+              <Link href="/vehicles/new">
+                <Button>
+                  <Plus className="size-4" />
+                  Add Vehicle
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {vehicleStatuses.map(({ vehicle, overdue, dueSoon }) => (
               <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card className={cn(
+                  'hover:shadow-md transition-shadow cursor-pointer border-l-4',
+                  overdue > 0 ? 'border-l-red-500' : dueSoon > 0 ? 'border-l-amber-400' : 'border-l-green-500'
+                )}>
                   <CardHeader>
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base">{vehicle.name}</CardTitle>
