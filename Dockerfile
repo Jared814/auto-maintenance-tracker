@@ -35,4 +35,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "--max-old-space-size=256", "server.js"]
+CMD ["node", "--max-old-space-size=384", "server.js"]

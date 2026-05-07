@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getVehiclesByAccountId, getMaintenanceLogsByVehicleId, getMaintenanceTypes } from '@/lib/db';
+import { getVehiclesByAccountId, getMaintenanceLogCountsByVehicleIds, getMaintenanceTypes } from '@/lib/db';
 import { calculateMaintenanceStatus } from '@/lib/maintenance-status';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,29 +18,27 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect('/login');
 
   const vehicles = await getVehiclesByAccountId(session.user.id);
-  const maintenanceTypes = await getMaintenanceTypes(session.user.id);
+  const [maintenanceTypes, latestLogsByVehicle] = await Promise.all([
+    getMaintenanceTypes(session.user.id),
+    getMaintenanceLogCountsByVehicleIds(vehicles.map((v) => v.id)),
+  ]);
 
-  // Compute worst status per vehicle
-  const vehicleStatuses = await Promise.all(
-    vehicles.map(async (vehicle) => {
-      const logs = await getMaintenanceLogsByVehicleId(vehicle.id);
+  const vehicleStatuses = vehicles.map((vehicle) => {
+    const typeMap = latestLogsByVehicle.get(vehicle.id) ?? new Map<string, string>();
 
-      let overdue = 0;
-      let dueSoon = 0;
+    let overdue = 0;
+    let dueSoon = 0;
 
-      for (const type of maintenanceTypes) {
-        const latestLog = logs
-          .filter((l) => l.maintenance_type_id === type.id)
-          .sort((a, b) => b.serviced_at.localeCompare(a.serviced_at))[0] ?? null;
+    for (const type of maintenanceTypes) {
+      const servicedAt = typeMap.get(type.id) ?? null;
+      const latestLog = servicedAt ? { serviced_at: servicedAt, mileage_at_service: 0, next_due_mileage: null, next_due_date: null } as Parameters<typeof calculateMaintenanceStatus>[0] : null;
+      const { status } = calculateMaintenanceStatus(latestLog, type, vehicle.current_mileage);
+      if (status === 'OVERDUE' || status === 'NEVER_SERVICED') overdue++;
+      else if (status === 'DUE_SOON') dueSoon++;
+    }
 
-        const { status } = calculateMaintenanceStatus(latestLog, type, vehicle.current_mileage);
-        if (status === 'OVERDUE' || status === 'NEVER_SERVICED') overdue++;
-        else if (status === 'DUE_SOON') dueSoon++;
-      }
-
-      return { vehicle, overdue, dueSoon };
-    })
-  );
+    return { vehicle, overdue, dueSoon };
+  });
 
   return (
     <AppShell>

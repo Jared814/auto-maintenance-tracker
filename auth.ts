@@ -15,6 +15,7 @@ function pruneAttempts() {
     }
   }
 }
+setInterval(pruneAttempts, LOCKOUT_TIME);
 
 export const authConfig: NextAuthConfig = {
   pages: { signIn: '/login' },

@@ -1,4 +1,5 @@
-import { eq, and, desc, isNull, or, notInArray } from 'drizzle-orm';
+import { eq, and, desc, isNull, or, notInArray, inArray } from 'drizzle-orm';
+import { unstable_cache } from 'next/cache';
 import { db, runMigrations } from './db/index';
 import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, accountDisabledTypes, accountTypeOverrides } from './db/schema';
 import { getNow } from './dates';
@@ -199,6 +200,13 @@ function applyOverrides<T extends { id: string; default_interval_miles: number |
   });
 }
 
+const getCachedDefaultTypes = unstable_cache(
+  async () =>
+    db.select().from(maintenanceTypes).where(isNull(maintenanceTypes.account_id)),
+  ['default-maintenance-types'],
+  { revalidate: 300 }
+);
+
 export async function getMaintenanceTypes(accountId: string) {
   const [disabled, overrides] = await Promise.all([
     db.select({ type_id: accountDisabledTypes.type_id })
@@ -208,12 +216,16 @@ export async function getMaintenanceTypes(accountId: string) {
   ]);
   const disabledIds = disabled.map((r) => r.type_id);
 
-  const baseCondition = or(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.account_id, accountId))!;
-  const types = disabledIds.length === 0
-    ? await db.select().from(maintenanceTypes).where(baseCondition)
-    : await db.select().from(maintenanceTypes).where(and(baseCondition, notInArray(maintenanceTypes.id, disabledIds)));
+  const [defaultTypes, customTypes] = await Promise.all([
+    getCachedDefaultTypes(),
+    db.select().from(maintenanceTypes).where(eq(maintenanceTypes.account_id, accountId)),
+  ]);
 
-  return applyOverrides(types, overrides);
+  const allTypes = [...defaultTypes, ...customTypes].filter(
+    (t) => !disabledIds.includes(t.id)
+  );
+
+  return applyOverrides(allTypes, overrides);
 }
 
 export async function getMaintenanceTypesAll(accountId: string) {
@@ -445,4 +457,34 @@ export async function getPublicVehicleData(qrSlug: string) {
   const logs = await getMaintenanceLogsByVehicleId(vehicle.id);
 
   return { vehicle, maintenanceTypes: types, logs };
+}
+
+export async function getMaintenanceLogCountsByVehicleIds(
+  vehicleIds: string[]
+): Promise<Map<string, Map<string, string>>> {
+  if (vehicleIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      vehicle_id: maintenanceLogs.vehicle_id,
+      maintenance_type_id: maintenanceLogs.maintenance_type_id,
+      serviced_at: maintenanceLogs.serviced_at,
+    })
+    .from(maintenanceLogs)
+    .where(inArray(maintenanceLogs.vehicle_id, vehicleIds));
+
+  // Build map: vehicleId -> (typeId -> latest serviced_at)
+  const result = new Map<string, Map<string, string>>();
+  for (const row of rows) {
+    let typeMap = result.get(row.vehicle_id);
+    if (!typeMap) {
+      typeMap = new Map();
+      result.set(row.vehicle_id, typeMap);
+    }
+    const existing = typeMap.get(row.maintenance_type_id);
+    if (!existing || row.serviced_at > existing) {
+      typeMap.set(row.maintenance_type_id, row.serviced_at);
+    }
+  }
+  return result;
 }
