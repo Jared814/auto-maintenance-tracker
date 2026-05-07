@@ -1,0 +1,94 @@
+{{define "dashboard"}}
+{{template "base" .}}
+{{end}}
+
+{{define "title"}}Dashboard — AutoTrack{{end}}
+
+{{define "content"}}
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">Dashboard</h1>
+      {{if .AccountName}}
+      <p class="text-gray-500 text-sm">Welcome back, {{.AccountName}}</p>
+      {{end}}
+    </div>
+    <a href="/vehicles/new"
+      class="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      Add Vehicle
+    </a>
+  </div>
+
+  {{if .Flash}}
+  <div class="text-sm text-green-700 bg-green-50 border border-green-200 px-4 py-3 rounded-lg">
+    {{.Flash}}
+  </div>
+  {{end}}
+
+  {{if not .Vehicles}}
+  <!-- Empty state -->
+  <div class="flex flex-col items-center justify-center py-20 max-w-sm mx-auto text-center">
+    <div class="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
+      <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1 2 1 2-1 2 1 2-1 2 1z" />
+      </svg>
+    </div>
+    <p class="font-semibold text-gray-900 mb-1">No vehicles yet</p>
+    <p class="text-sm text-gray-500 mb-4">Add your first vehicle to start tracking maintenance</p>
+    <a href="/vehicles/new"
+      class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      Add Vehicle
+    </a>
+  </div>
+  {{else}}
+  <!-- Vehicle grid -->
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {{range .Vehicles}}
+    <a href="/vehicles/{{.Vehicle.ID}}" class="block group">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer border-l-4
+        {{if gt .OverdueCount 0}}border-l-red-500
+        {{else if gt .DueSoonCount 0}}border-l-amber-400
+        {{else}}border-l-green-500{{end}}">
+        <div class="p-4">
+          <div class="flex items-start justify-between gap-2 mb-1">
+            <h2 class="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{{.Vehicle.Name}}</h2>
+            {{if gt .OverdueCount 0}}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200 shrink-0">
+              {{.OverdueCount}} overdue
+            </span>
+            {{else if gt .DueSoonCount 0}}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
+              {{.DueSoonCount}} due soon
+            </span>
+            {{else}}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200 shrink-0">
+              All good
+            </span>
+            {{end}}
+          </div>
+          {{if or .Vehicle.Make .Vehicle.Year}}
+          <p class="text-xs text-gray-500 mb-2">
+            {{if .Vehicle.Year}}{{.Vehicle.Year}} {{end}}{{.Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{.Vehicle.Model}}
+          </p>
+          {{end}}
+          <p class="text-sm text-gray-500">
+            {{.Vehicle.CurrentMileage}} {{.Vehicle.Units}}
+          </p>
+        </div>
+      </div>
+    </a>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}

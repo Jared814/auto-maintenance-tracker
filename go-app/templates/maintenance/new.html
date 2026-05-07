@@ -1,0 +1,133 @@
+{{define "maintenance-new"}}
+{{template "base" .}}
+{{end}}
+
+{{define "title"}}Log Service — {{.Vehicle.Name}} — AutoTrack{{end}}
+
+{{define "content"}}
+<div class="max-w-lg space-y-6">
+  <!-- Header -->
+  <div class="flex items-center gap-2">
+    <a href="/vehicles/{{.Vehicle.ID}}/maintenance"
+      class="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold">Log Service</h1>
+      <p class="text-sm text-gray-500">{{.Vehicle.Name}}</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    {{if .Error}}
+    <div class="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg mb-4">
+      {{.Error}}
+    </div>
+    {{end}}
+
+    <form action="/vehicles/{{.Vehicle.ID}}/maintenance" method="POST" class="space-y-4">
+
+      <div class="space-y-1.5">
+        <label for="maintenance_type_id" class="block text-sm font-medium text-gray-700">
+          Service Type <span class="text-red-500">*</span>
+        </label>
+        <select
+          id="maintenance_type_id" name="maintenance_type_id"
+          required
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white">
+          <option value="">Select service type…</option>
+          {{range .Types}}
+          <option value="{{.ID}}">{{.Name}} ({{.Category}})</option>
+          {{end}}
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="serviced_at" class="block text-sm font-medium text-gray-700">
+            Service Date <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="serviced_at" name="serviced_at" type="date"
+            required
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="mileage_at_service" class="block text-sm font-medium text-gray-700">
+            Mileage <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="mileage_at_service" name="mileage_at_service" type="number"
+            placeholder="65000"
+            required min="0"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="next_due_mileage" class="block text-sm font-medium text-gray-700">Next Due Mileage</label>
+          <input
+            id="next_due_mileage" name="next_due_mileage" type="number"
+            placeholder="70000"
+            min="0"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="next_due_date" class="block text-sm font-medium text-gray-700">Next Due Date</label>
+          <input
+            id="next_due_date" name="next_due_date" type="date"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="price_paid" class="block text-sm font-medium text-gray-700">Price Paid</label>
+          <input
+            id="price_paid" name="price_paid" type="text"
+            placeholder="49.99"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="shop" class="block text-sm font-medium text-gray-700">Shop / Location</label>
+          <input
+            id="shop" name="shop" type="text"
+            placeholder="Jiffy Lube"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+        <textarea
+          id="notes" name="notes"
+          rows="3"
+          placeholder="Any additional notes…"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors resize-none"
+        ></textarea>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <a href="/vehicles/{{.Vehicle.ID}}/maintenance"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+          Save Record
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

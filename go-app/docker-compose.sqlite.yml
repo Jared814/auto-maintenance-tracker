@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: /DATA/AppData/big-bear-dockge/stacks/auto-maintenance-tracker/go-app
+      dockerfile: Dockerfile
+    container_name: automotive-maint-go
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AUTH_SECRET=change-this-to-a-secure-random-string-at-least-32-chars
+      # No DATABASE_URL = SQLite mode.
+      # Optionally override the default SQLite path:
+      # - SQLITE_DB_PATH=/app/data/maintenance.db
+      # Cloudflare R2 (optional — remove comments to enable receipt uploads)
+      # - CLOUDFLARE_R2_ACCOUNT_ID=
+      # - CLOUDFLARE_R2_ACCESS_KEY_ID=
+      # - CLOUDFLARE_R2_SECRET_ACCESS_KEY=
+      # - CLOUDFLARE_R2_BUCKET_NAME=
+      # - CLOUDFLARE_R2_PUBLIC_URL=
+    ports:
+      - "3000:3000"
+    volumes:
+      - sqlite_data:/app/data
+
+volumes:
+  sqlite_data:

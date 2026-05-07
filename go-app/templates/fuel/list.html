@@ -1,0 +1,159 @@
+{{define "fuel-list"}}
+{{template "base" .}}
+{{end}}
+
+{{define "title"}}Fuel Log — {{.Vehicle.Name}} — AutoTrack{{end}}
+
+{{define "content"}}
+<div class="max-w-lg space-y-6">
+  <!-- Header -->
+  <div class="flex items-center gap-2">
+    <a href="/vehicles/{{.Vehicle.ID}}"
+      class="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold">Fuel Log</h1>
+      <p class="text-sm text-gray-500">{{.Vehicle.Name}}</p>
+    </div>
+  </div>
+
+  {{if .Error}}
+  <div class="text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-3 rounded-lg">
+    {{.Error}}
+  </div>
+  {{end}}
+
+  {{if .Flash}}
+  <div class="text-sm text-green-700 bg-green-50 border border-green-200 px-4 py-3 rounded-lg">
+    {{.Flash}}
+  </div>
+  {{end}}
+
+  <!-- Add fuel log form -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+    <h2 class="text-base font-semibold mb-4">Log a Fill-Up</h2>
+    <form action="/vehicles/{{.Vehicle.ID}}/fuel" method="POST" class="space-y-3">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="filled_at" class="block text-sm font-medium text-gray-700">
+            Date <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="filled_at" name="filled_at" type="date"
+            required
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="mileage" class="block text-sm font-medium text-gray-700">
+            Odometer <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="mileage" name="mileage" type="number"
+            placeholder="65000"
+            required min="0"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="block text-sm font-medium text-gray-700">
+          Fuel Added <span class="text-red-500">*</span>
+        </label>
+        <div class="flex gap-2">
+          <input
+            name="fuel_quantity" type="number"
+            step="0.001" min="0"
+            placeholder="12.5"
+            required
+            class="flex-1 h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+          <select
+            name="fuel_unit"
+            class="h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white">
+            <option value="gallons">gal</option>
+            <option value="liters">L</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="price_per_unit" class="block text-sm font-medium text-gray-700">
+          Price per Gallon/Liter
+          <span class="font-normal text-gray-500">(optional)</span>
+        </label>
+        <input
+          id="price_per_unit" name="price_per_unit" type="text"
+          placeholder="3.49"
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+        />
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="fuel_notes" class="block text-sm font-medium text-gray-700">
+          Notes
+          <span class="font-normal text-gray-500">(optional)</span>
+        </label>
+        <input
+          id="fuel_notes" name="notes" type="text"
+          placeholder="e.g. Premium fuel, road trip…"
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+        Save Fill-Up
+      </button>
+    </form>
+  </div>
+
+  <!-- Fuel log history -->
+  {{if not .FuelLogs}}
+  <p class="text-sm text-gray-500 text-center py-8">
+    No fill-ups logged yet. Add your first one above to start tracking fuel economy.
+  </p>
+  {{else}}
+  <div>
+    <h2 class="text-base font-semibold mb-3">Fill History</h2>
+    <div class="space-y-2">
+      {{range .FuelLogs}}
+      <div class="fuel-log-row flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <p class="text-sm font-medium text-gray-900">{{.FilledAt}}</p>
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5">
+            {{.FuelQuantity}} {{.FuelUnit}} &middot; {{.Mileage}} {{$.Vehicle.Units}}
+            {{if .PricePerUnit}} &middot; ${{.PricePerUnit}}/unit{{end}}
+          </p>
+          {{if .Notes}}
+          <p class="text-xs text-gray-400 mt-0.5">{{.Notes}}</p>
+          {{end}}
+        </div>
+        <button
+          hx-delete="/vehicles/{{$.Vehicle.ID}}/fuel/{{.ID}}"
+          hx-confirm="Delete this fill-up record?"
+          hx-target="closest .fuel-log-row"
+          hx-swap="outerHTML"
+          class="ml-3 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+          title="Delete">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+</div>
+{{end}}

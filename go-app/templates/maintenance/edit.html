@@ -1,0 +1,140 @@
+{{define "maintenance-edit"}}
+{{template "base" .}}
+{{end}}
+
+{{define "title"}}Edit Service Record — {{.Vehicle.Name}} — AutoTrack{{end}}
+
+{{define "content"}}
+<div class="max-w-lg space-y-6">
+  <!-- Header -->
+  <div class="flex items-center gap-2">
+    <a href="/vehicles/{{.Vehicle.ID}}/maintenance/{{.Log.ID}}"
+      class="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <h1 class="text-2xl font-bold">Edit Service Record</h1>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    {{if .Error}}
+    <div class="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg mb-4">
+      {{.Error}}
+    </div>
+    {{end}}
+
+    <form action="/vehicles/{{.Vehicle.ID}}/maintenance/{{.Log.ID}}/edit" method="POST" class="space-y-4">
+
+      <!-- Type (read-only display, not editable for simplicity) -->
+      <div class="space-y-1.5">
+        <label class="block text-sm font-medium text-gray-700">Service Type</label>
+        <div class="h-9 flex items-center px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-600">
+          {{range .Types}}{{if eq .ID $.Log.MaintenanceTypeID}}{{.Name}}{{end}}{{end}}
+        </div>
+        <input type="hidden" name="maintenance_type_id" value="{{.Log.MaintenanceTypeID}}">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="serviced_at" class="block text-sm font-medium text-gray-700">
+            Service Date <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="serviced_at" name="serviced_at" type="date"
+            value="{{.Log.ServicedAt}}"
+            required
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="mileage_at_service" class="block text-sm font-medium text-gray-700">
+            Mileage <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="mileage_at_service" name="mileage_at_service" type="number"
+            value="{{.Log.MileageAtService}}"
+            required min="0"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="next_due_mileage" class="block text-sm font-medium text-gray-700">Next Due Mileage</label>
+          <input
+            id="next_due_mileage" name="next_due_mileage" type="number"
+            value="{{.Log.NextDueMileage}}"
+            min="0"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="next_due_date" class="block text-sm font-medium text-gray-700">Next Due Date</label>
+          <input
+            id="next_due_date" name="next_due_date" type="date"
+            value="{{.Log.NextDueDate}}"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="price_paid" class="block text-sm font-medium text-gray-700">Price Paid</label>
+          <input
+            id="price_paid" name="price_paid" type="text"
+            value="{{.Log.PricePaid}}"
+            placeholder="49.99"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="shop" class="block text-sm font-medium text-gray-700">Shop / Location</label>
+          <input
+            id="shop" name="shop" type="text"
+            value="{{.Log.Shop}}"
+            placeholder="Jiffy Lube"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="notes" class="block text-sm font-medium text-gray-700">Notes</label>
+        <textarea
+          id="notes" name="notes"
+          rows="3"
+          placeholder="Any additional notes…"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors resize-none"
+        >{{.Log.Notes}}</textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-3 pt-2">
+        <a href="/vehicles/{{.Vehicle.ID}}/maintenance/{{.Log.ID}}"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+          Save Changes
+        </button>
+        <button
+          type="button"
+          hx-delete="/vehicles/{{.Vehicle.ID}}/maintenance/{{.Log.ID}}"
+          hx-confirm="Delete this service record? This cannot be undone."
+          hx-push-url="/vehicles/{{.Vehicle.ID}}/maintenance"
+          class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Delete
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

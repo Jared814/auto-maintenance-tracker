@@ -1,0 +1,140 @@
+{{define "vehicle-new"}}
+{{template "base" .}}
+{{end}}
+
+{{define "title"}}Add Vehicle — AutoTrack{{end}}
+
+{{define "content"}}
+<div class="max-w-lg space-y-6">
+  <!-- Header -->
+  <div class="flex items-center gap-2">
+    <a href="/vehicles"
+      class="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </a>
+    <h1 class="text-2xl font-bold">Add Vehicle</h1>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    {{if .Error}}
+    <div class="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg mb-4">
+      {{.Error}}
+    </div>
+    {{end}}
+
+    <form action="/vehicles" method="POST" class="space-y-4">
+
+      <div class="space-y-1.5">
+        <label for="name" class="block text-sm font-medium text-gray-700">Vehicle Name <span class="text-red-500">*</span></label>
+        <input
+          id="name" name="name" type="text"
+          placeholder="e.g. Family SUV, Dad's Truck"
+          required
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="make" class="block text-sm font-medium text-gray-700">Make</label>
+          <input
+            id="make" name="make" type="text"
+            placeholder="Toyota"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="model" class="block text-sm font-medium text-gray-700">Model</label>
+          <input
+            id="model" name="model" type="text"
+            placeholder="Camry"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="year" class="block text-sm font-medium text-gray-700">Year</label>
+          <input
+            id="year" name="year" type="number"
+            placeholder="2020"
+            min="1900" max="2100"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="units" class="block text-sm font-medium text-gray-700">Units</label>
+          <select
+            id="units" name="units"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors bg-white">
+            <option value="miles">Miles</option>
+            <option value="km">Kilometers</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="current_mileage" class="block text-sm font-medium text-gray-700">Current Mileage</label>
+        <input
+          id="current_mileage" name="current_mileage" type="number"
+          placeholder="65000"
+          min="0"
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5">
+          <label for="vin" class="block text-sm font-medium text-gray-700">VIN</label>
+          <input
+            id="vin" name="vin" type="text"
+            placeholder="1HGBH41JXMN109186"
+            maxlength="17"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+        <div class="space-y-1.5">
+          <label for="license_plate" class="block text-sm font-medium text-gray-700">License Plate</label>
+          <input
+            id="license_plate" name="license_plate" type="text"
+            placeholder="ABC-1234"
+            class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <label for="qr_pin" class="block text-sm font-medium text-gray-700">
+          QR PIN <span class="text-red-500">*</span>
+          <span class="font-normal text-gray-500 ml-1">(4–8 digits, used for public QR service logging)</span>
+        </label>
+        <input
+          id="qr_pin" name="qr_pin" type="password"
+          inputmode="numeric"
+          pattern="\d*"
+          placeholder="4-8 digit PIN"
+          required
+          minlength="4"
+          maxlength="8"
+          class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors tracking-widest"
+        />
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <a href="/vehicles"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+          Add Vehicle
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

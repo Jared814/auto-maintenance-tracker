@@ -1,0 +1,14 @@
+# Compiled binary
+server
+server.exe
+
+# SQLite data directory and database files
+data/
+*.db
+*.db.bak
+
+# Local environment — never commit secrets
+.env
+
+# Go test binaries
+*.test
