@@ -28,8 +28,8 @@ type Config struct {
 	CloudflareR2BucketName string
 	// CloudflareR2PublicURL is the public base URL for R2 objects.
 	CloudflareR2PublicURL string
-	// NodeEnv is the runtime environment ("development", "production", etc.).
-	NodeEnv string
+	// AppEnv is the runtime environment ("development", "production", etc.).
+	AppEnv string
 }
 
 // Load reads configuration from a .env file (if present) and environment variables.
@@ -49,7 +49,7 @@ func Load() *Config {
 		CloudflareR2SecretAccessKey: os.Getenv("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
 		CloudflareR2BucketName:      os.Getenv("CLOUDFLARE_R2_BUCKET_NAME"),
 		CloudflareR2PublicURL:       os.Getenv("CLOUDFLARE_R2_PUBLIC_URL"),
-		NodeEnv:                     getEnv("NODE_ENV", "development"),
+		AppEnv:                      getEnv("APP_ENV", getEnv("NODE_ENV", "development")),
 	}
 }
 

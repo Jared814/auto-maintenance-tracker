@@ -30,7 +30,7 @@ func initStore(cfg *config.Config) {
 		MaxAge:   7 * 24 * 3600, // 7 days
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   cfg.NodeEnv == "production",
+		Secure:   cfg.AppEnv == "production",
 	}
 }
 

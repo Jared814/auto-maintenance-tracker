@@ -1,6 +1,6 @@
-# Compiled binary
-server
-server.exe
+# Compiled binary (root-level only, not the cmd/server/ directory)
+/server
+/server.exe
 
 # SQLite data directory and database files
 data/
