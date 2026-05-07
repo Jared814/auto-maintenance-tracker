@@ -24,9 +24,9 @@
           </svg>
         </div>
         <h1 class="text-xl font-bold text-center">{{.Vehicle.Name}}</h1>
-        {{if or .Vehicle.Make .Vehicle.Year}}
+        {{if or .Vehicle.Make.Valid .Vehicle.Year.Valid}}
         <p class="text-gray-500 text-sm text-center">
-          {{if .Vehicle.Year}}{{.Vehicle.Year}} {{end}}{{.Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{.Vehicle.Model}}
+          {{if .Vehicle.Year}}{{nullInt .Vehicle.Year}} {{end}}{{nullStr .Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{nullStr .Vehicle.Model}}
         </p>
         {{end}}
         <p class="text-gray-500 text-sm text-center">Enter the PIN to view maintenance history</p>
@@ -68,9 +68,9 @@
         </svg>
         <div class="min-w-0">
           <h1 class="font-bold text-lg leading-tight truncate">{{.Vehicle.Name}}</h1>
-          {{if or .Vehicle.Make .Vehicle.Year}}
+          {{if or .Vehicle.Make.Valid .Vehicle.Year.Valid}}
           <p class="text-blue-100 text-sm">
-            {{if .Vehicle.Year}}{{.Vehicle.Year}} {{end}}{{.Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{.Vehicle.Model}}
+            {{if .Vehicle.Year}}{{nullInt .Vehicle.Year}} {{end}}{{nullStr .Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{nullStr .Vehicle.Model}}
           </p>
           {{end}}
         </div>
@@ -89,7 +89,7 @@
     <div class="flex flex-wrap gap-2 text-sm">
       <div class="bg-white border border-gray-200 rounded-lg px-3 py-2">
         <span class="text-gray-500">Mileage: </span>
-        <span class="font-medium">{{.Vehicle.CurrentMileage}} {{.Vehicle.Units}}</span>
+        <span class="font-medium">{{nullInt .Vehicle.CurrentMileage}} {{.Vehicle.Units}}</span>
       </div>
     </div>
 
@@ -145,7 +145,7 @@
               </label>
               <input
                 id="pub-mileage" name="mileage_at_service" type="number"
-                placeholder="{{.Vehicle.CurrentMileage}}"
+                placeholder="{{nullInt .Vehicle.CurrentMileage}}"
                 required min="0"
                 class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               />

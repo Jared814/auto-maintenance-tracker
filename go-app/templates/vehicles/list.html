@@ -50,15 +50,15 @@
       <div class="p-4">
         <div class="mb-1">
           <h2 class="font-semibold text-gray-900">{{.Name}}</h2>
-          {{if or .Make .Year}}
+          {{if or .Make.Valid .Year.Valid}}
           <p class="text-xs text-gray-500">
-            {{if .Year}}{{.Year}} {{end}}{{.Make}}{{if and .Make .Model}} {{end}}{{.Model}}
+            {{if .Year.Valid}}{{nullInt .Year}} {{end}}{{nullStr .Make}}{{if and .Make.Valid .Model.Valid}} {{end}}{{nullStr .Model}}
           </p>
           {{end}}
         </div>
         <p class="text-sm text-gray-500 mb-4">
-          {{.CurrentMileage}} {{.Units}}
-          {{if .LicensePlate}} &middot; {{.LicensePlate}}{{end}}
+          {{nullInt .CurrentMileage}} {{.Units}}
+          {{if .LicensePlate.Valid}} &middot; {{nullStr .LicensePlate}}{{end}}
         </p>
         <div class="flex gap-2">
           <a href="/vehicles/{{.ID}}"

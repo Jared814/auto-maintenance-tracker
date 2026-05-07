@@ -42,7 +42,7 @@
           <label for="make" class="block text-sm font-medium text-gray-700">Make</label>
           <input
             id="make" name="make" type="text"
-            value="{{.Vehicle.Make}}"
+            value="{{nullStr .Vehicle.Make}}"
             placeholder="Toyota"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -51,7 +51,7 @@
           <label for="model" class="block text-sm font-medium text-gray-700">Model</label>
           <input
             id="model" name="model" type="text"
-            value="{{.Vehicle.Model}}"
+            value="{{nullStr .Vehicle.Model}}"
             placeholder="Camry"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -63,7 +63,7 @@
           <label for="year" class="block text-sm font-medium text-gray-700">Year</label>
           <input
             id="year" name="year" type="number"
-            value="{{.Vehicle.Year}}"
+            value="{{nullInt .Vehicle.Year}}"
             min="1900" max="2100"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -83,7 +83,7 @@
         <label for="current_mileage" class="block text-sm font-medium text-gray-700">Current Mileage</label>
         <input
           id="current_mileage" name="current_mileage" type="number"
-          value="{{.Vehicle.CurrentMileage}}"
+          value="{{nullInt .Vehicle.CurrentMileage}}"
           min="0"
           class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
         />
@@ -94,7 +94,7 @@
           <label for="vin" class="block text-sm font-medium text-gray-700">VIN</label>
           <input
             id="vin" name="vin" type="text"
-            value="{{.Vehicle.VIN}}"
+            value="{{nullStr .Vehicle.VIN}}"
             maxlength="17"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -103,7 +103,7 @@
           <label for="license_plate" class="block text-sm font-medium text-gray-700">License Plate</label>
           <input
             id="license_plate" name="license_plate" type="text"
-            value="{{.Vehicle.LicensePlate}}"
+            value="{{nullStr .Vehicle.LicensePlate}}"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
         </div>

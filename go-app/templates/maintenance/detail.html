@@ -40,34 +40,34 @@
       <span class="text-gray-500">Mileage</span>
       <span class="font-medium">{{.Log.MileageAtService}} {{.Vehicle.Units}}</span>
     </div>
-    {{if .Log.Shop}}
+    {{if .Log.Shop.Valid}}
     <div class="flex justify-between text-sm">
       <span class="text-gray-500">Shop</span>
-      <span class="font-medium">{{.Log.Shop}}</span>
+      <span class="font-medium">{{nullStr .Log.Shop}}</span>
     </div>
     {{end}}
-    {{if .Log.PricePaid}}
+    {{if .Log.PricePaid.Valid}}
     <div class="flex justify-between text-sm">
       <span class="text-gray-500">Price</span>
-      <span class="font-medium">${{.Log.PricePaid}}</span>
+      <span class="font-medium">${{nullStr .Log.PricePaid}}</span>
     </div>
     {{end}}
-    {{if .Log.NextDueMileage}}
+    {{if .Log.NextDueMileage.Valid}}
     <div class="flex justify-between text-sm">
       <span class="text-gray-500">Next Due Mileage</span>
-      <span class="font-medium">{{.Log.NextDueMileage}} {{.Vehicle.Units}}</span>
+      <span class="font-medium">{{nullInt .Log.NextDueMileage}} {{.Vehicle.Units}}</span>
     </div>
     {{end}}
-    {{if .Log.NextDueDate}}
+    {{if .Log.NextDueDate.Valid}}
     <div class="flex justify-between text-sm">
       <span class="text-gray-500">Next Due Date</span>
-      <span class="font-medium">{{.Log.NextDueDate}}</span>
+      <span class="font-medium">{{nullStr .Log.NextDueDate}}</span>
     </div>
     {{end}}
-    {{if .Log.Notes}}
+    {{if .Log.Notes.Valid}}
     <div class="pt-2 border-t border-gray-100">
       <p class="text-xs text-gray-500 mb-1">Notes</p>
-      <p class="text-sm text-gray-900">{{.Log.Notes}}</p>
+      <p class="text-sm text-gray-900">{{nullStr .Log.Notes}}</p>
     </div>
     {{end}}
   </div>

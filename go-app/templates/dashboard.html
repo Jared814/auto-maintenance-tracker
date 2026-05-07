@@ -76,13 +76,13 @@
             </span>
             {{end}}
           </div>
-          {{if or .Vehicle.Make .Vehicle.Year}}
+          {{if or .Vehicle.Make.Valid .Vehicle.Year.Valid}}
           <p class="text-xs text-gray-500 mb-2">
-            {{if .Vehicle.Year}}{{.Vehicle.Year}} {{end}}{{.Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{.Vehicle.Model}}
+            {{if .Vehicle.Year}}{{nullInt .Vehicle.Year}} {{end}}{{nullStr .Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{nullStr .Vehicle.Model}}
           </p>
           {{end}}
           <p class="text-sm text-gray-500">
-            {{.Vehicle.CurrentMileage}} {{.Vehicle.Units}}
+            {{nullInt .Vehicle.CurrentMileage}} {{.Vehicle.Units}}
           </p>
         </div>
       </div>

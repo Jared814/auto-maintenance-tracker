@@ -131,10 +131,10 @@
           </div>
           <p class="text-xs text-gray-500 mt-0.5">
             {{.FuelQuantity}} {{.FuelUnit}} &middot; {{.Mileage}} {{$.Vehicle.Units}}
-            {{if .PricePerUnit}} &middot; ${{.PricePerUnit}}/unit{{end}}
+            {{if .PricePerUnit.Valid}} &middot; ${{nullStr .PricePerUnit}}/unit{{end}}
           </p>
-          {{if .Notes}}
-          <p class="text-xs text-gray-400 mt-0.5">{{.Notes}}</p>
+          {{if .Notes.Valid}}
+          <p class="text-xs text-gray-400 mt-0.5">{{nullStr .Notes}}</p>
           {{end}}
         </div>
         <button

@@ -65,7 +65,7 @@
           <label for="next_due_mileage" class="block text-sm font-medium text-gray-700">Next Due Mileage</label>
           <input
             id="next_due_mileage" name="next_due_mileage" type="number"
-            value="{{.Log.NextDueMileage}}"
+            value="{{nullInt .Log.NextDueMileage}}"
             min="0"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -74,7 +74,7 @@
           <label for="next_due_date" class="block text-sm font-medium text-gray-700">Next Due Date</label>
           <input
             id="next_due_date" name="next_due_date" type="date"
-            value="{{.Log.NextDueDate}}"
+            value="{{nullStr .Log.NextDueDate}}"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
         </div>
@@ -85,7 +85,7 @@
           <label for="price_paid" class="block text-sm font-medium text-gray-700">Price Paid</label>
           <input
             id="price_paid" name="price_paid" type="text"
-            value="{{.Log.PricePaid}}"
+            value="{{nullStr .Log.PricePaid}}"
             placeholder="49.99"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -94,7 +94,7 @@
           <label for="shop" class="block text-sm font-medium text-gray-700">Shop / Location</label>
           <input
             id="shop" name="shop" type="text"
-            value="{{.Log.Shop}}"
+            value="{{nullStr .Log.Shop}}"
             placeholder="Jiffy Lube"
             class="w-full h-9 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
           />
@@ -108,7 +108,7 @@
           rows="3"
           placeholder="Any additional notes…"
           class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors resize-none"
-        >{{.Log.Notes}}</textarea>
+        >{{nullStr .Log.Notes}}</textarea>
       </div>
 
       <div class="flex flex-wrap gap-3 pt-2">

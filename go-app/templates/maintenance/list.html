@@ -61,13 +61,13 @@
           <p class="text-sm text-gray-500 mt-0.5">
             {{.ServicedAt}} &middot; {{.MileageAtService}} {{$.Vehicle.Units}}
           </p>
-          {{if .Shop}}
-          <p class="text-xs text-gray-400 mt-0.5">{{.Shop}}</p>
+          {{if .Shop.Valid}}
+          <p class="text-xs text-gray-400 mt-0.5">{{nullStr .Shop}}</p>
           {{end}}
         </a>
         <div class="flex items-center gap-2 shrink-0">
-          {{if .PricePaid}}
-          <span class="text-sm font-medium text-gray-700">${{.PricePaid}}</span>
+          {{if .PricePaid.Valid}}
+          <span class="text-sm font-medium text-gray-700">${{nullStr .PricePaid}}</span>
           {{end}}
           <button
             hx-delete="/vehicles/{{$.Vehicle.ID}}/maintenance/{{.ID}}"

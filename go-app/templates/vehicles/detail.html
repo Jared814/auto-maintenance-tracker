@@ -17,9 +17,9 @@
       </a>
       <div>
         <h1 class="text-2xl font-bold">{{.Vehicle.Name}}</h1>
-        {{if or .Vehicle.Make .Vehicle.Year}}
+        {{if or .Vehicle.Make.Valid .Vehicle.Year.Valid}}
         <p class="text-sm text-gray-500">
-          {{if .Vehicle.Year}}{{.Vehicle.Year}} {{end}}{{.Vehicle.Make}}{{if and .Vehicle.Make .Vehicle.Model}} {{end}}{{.Vehicle.Model}}
+          {{if .Vehicle.Year.Valid}}{{nullInt .Vehicle.Year}} {{end}}{{nullStr .Vehicle.Make}}{{if and .Vehicle.Make.Valid .Vehicle.Model.Valid}} {{end}}{{nullStr .Vehicle.Model}}
         </p>
         {{end}}
       </div>
@@ -48,12 +48,12 @@
   <div class="flex flex-wrap gap-3 text-sm">
     <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700">
       <span class="text-gray-500">Mileage:</span>
-      <span class="font-medium">{{.Vehicle.CurrentMileage}} {{.Vehicle.Units}}</span>
+      <span class="font-medium">{{nullInt .Vehicle.CurrentMileage}} {{.Vehicle.Units}}</span>
     </span>
-    {{if .Vehicle.LicensePlate}}
+    {{if .Vehicle.LicensePlate.Valid}}
     <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700">
       <span class="text-gray-500">Plate:</span>
-      <span class="font-medium">{{.Vehicle.LicensePlate}}</span>
+      <span class="font-medium">{{nullStr .Vehicle.LicensePlate}}</span>
     </span>
     {{end}}
   </div>
