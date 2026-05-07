@@ -6,6 +6,7 @@ import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings, Wrench, ChevronRight } from 'lucide-react';
+import { DatabaseBackupCard } from './database-backup-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,8 @@ export default async function SettingsPage() {
             </Link>
           </CardContent>
         </Card>
+
+        <DatabaseBackupCard available={!process.env.DATABASE_URL} />
       </div>
     </AppShell>
   );

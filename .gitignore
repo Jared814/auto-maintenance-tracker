@@ -15,5 +15,10 @@ out/
 # Build artifacts
 tsconfig.tsbuildinfo
 
+# SQLite database (local data, not committed)
+data/
+*.db
+*.db.bak
+
 # OS
 .DS_Store
