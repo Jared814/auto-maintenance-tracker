@@ -34,10 +34,17 @@ COPY --from=builder --chown=nextjs:nodejs /app/drizzle-sqlite ./drizzle-sqlite
 # Explicitly copy better-sqlite3 native addon — Next.js standalone may not
 # include it automatically, and it must match the glibc runtime (node:20-slim).
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+RUN mkdir -p /app/data
 
-USER nextjs
+# gosu allows the entrypoint to fix volume ownership (root-owned by Railway)
+# then cleanly drop privileges to the nextjs user before exec.
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["node", "--max-old-space-size=384", "server.js"]
+# Container starts as root so entrypoint can chown the mounted volume,
+# then gosu drops to nextjs for the actual node process.
+ENTRYPOINT ["/entrypoint.sh"]
