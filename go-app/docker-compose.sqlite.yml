@@ -1,7 +1,7 @@
 services:
   app:
     build:
-      context: /DATA/AppData/big-bear-dockge/stacks/auto-maintenance-tracker/go-app
+      context: .
       dockerfile: Dockerfile
     container_name: automotive-maint-go
     restart: always
