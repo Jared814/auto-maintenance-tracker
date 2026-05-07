@@ -1,13 +1,14 @@
 # ---- Stage 1: Build --------------------------------------------------------
+# Railway uses the repo root as build context, so all COPY paths are
+# relative to the repo root (go-app/ prefix).
 FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-# No CGO — pure-Go SQLite (modernc.org/sqlite) requires no C toolchain.
-COPY go.mod go.sum ./
+COPY go-app/go.mod go-app/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY go-app/ .
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w" \
@@ -32,7 +33,7 @@ COPY --from=builder /app/server .
 # Copy HTML templates (parsed from disk at startup).
 COPY --from=builder /app/templates ./templates
 
-# Persistent data directory (SQLite DB, uploaded files, etc.).
+# Persistent data directory (SQLite DB).
 RUN mkdir -p /app/data && chown appuser:appuser /app/data /app/templates
 
 USER appuser
