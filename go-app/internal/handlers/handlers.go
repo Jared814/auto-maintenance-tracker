@@ -2,9 +2,12 @@
 package handlers
 
 import (
+	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/jeg/auto-maintenance-tracker/internal/auth"
 	"github.com/jeg/auto-maintenance-tracker/internal/config"
@@ -13,16 +16,56 @@ import (
 )
 
 // Package-level singletons set by Init.
-var tmpl *template.Template
 var sqlDB *sqlx.DB
 var cfg *config.Config
 
 // Init wires up the shared state used by all handlers.
 // Call once from main before registering routes.
-func Init(t *template.Template, database *sqlx.DB, c *config.Config) {
-	tmpl = t
+func Init(_ *template.Template, database *sqlx.DB, c *config.Config) {
 	sqlDB = database
 	cfg = c
+}
+
+// standaloneTemplates are full HTML pages that do not use base.html inheritance.
+var standaloneTemplates = map[string]bool{
+	"login.html":          true,
+	"register.html":       true,
+	"public/vehicle.html": true,
+}
+
+// buildFuncMap returns the template function map used by all page templates.
+func buildFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"nullStr": func(s sql.NullString) string {
+			if s.Valid {
+				return s.String
+			}
+			return ""
+		},
+		"nullInt": func(n sql.NullInt64) string {
+			if n.Valid {
+				return fmt.Sprintf("%d", n.Int64)
+			}
+			return ""
+		},
+		"statusClass": db.StatusBadgeClass,
+		"statusLabel": db.StatusLabel,
+		"formatDate": func(s string) string {
+			for _, layout := range []string{time.RFC3339, "2006-01-02"} {
+				if t, err := time.Parse(layout, s); err == nil {
+					return t.Format("Jan 2, 2006")
+				}
+			}
+			return s
+		},
+		"seq": func(n int) []int {
+			s := make([]int, n)
+			for i := range s {
+				s[i] = i
+			}
+			return s
+		},
+	}
 }
 
 // ---- Template data structs -------------------------------------------------
@@ -190,11 +233,25 @@ func setFlash(w http.ResponseWriter, msg string) {
 	})
 }
 
-// render executes a named template writing the result to w.
+// render parses the required template files fresh per-request (gives each page
+// its own isolated block scope so {{define "content"}} overrides work correctly)
+// and executes the named template.
 func render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(w, name, data); err != nil {
-		log.Printf("render %q: %v", name, err)
+
+	files := []string{"templates/" + name}
+	if !standaloneTemplates[name] {
+		files = append([]string{"templates/base.html"}, files...)
+	}
+
+	t, err := template.New("").Funcs(buildFuncMap()).ParseFiles(files...)
+	if err != nil {
+		log.Printf("render parse %q: %v", name, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if err := t.ExecuteTemplate(w, name, data); err != nil {
+		log.Printf("render execute %q: %v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
