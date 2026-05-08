@@ -25,12 +25,13 @@ export async function GET() {
 
   const stat = fs.statSync(dbPath);
   const fileBuffer = fs.readFileSync(dbPath);
+  const date = new Date().toISOString().slice(0, 10);
 
   return new NextResponse(fileBuffer, {
     status: 200,
     headers: {
       'Content-Type': 'application/octet-stream',
-      'Content-Disposition': 'attachment; filename="maintenance.db"',
+      'Content-Disposition': `attachment; filename="automaint-${date}.db"`,
       'Content-Length': String(stat.size),
     },
   });
