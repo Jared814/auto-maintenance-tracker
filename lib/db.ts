@@ -409,6 +409,17 @@ export async function deleteReceipt(id: string) {
   return receipt;
 }
 
+// Delete all receipts for a log in one query; returns r2_keys for caller to clean up R2.
+export async function deleteReceiptsByLogId(logId: string): Promise<string[]> {
+  const rows = await db.select({ r2_key: receipts.r2_key })
+    .from(receipts)
+    .where(eq(receipts.maintenance_log_id, logId));
+  if (rows.length > 0) {
+    await db.delete(receipts).where(eq(receipts.maintenance_log_id, logId));
+  }
+  return rows.map((r) => r.r2_key);
+}
+
 // ---- FUEL LOGS ----
 
 export async function createFuelLog(data: {

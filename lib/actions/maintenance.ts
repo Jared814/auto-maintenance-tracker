@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, deleteReceipt, getMaintenanceLogById, getMaintenanceTypes, getReceiptsByLogId, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
 import { buildR2Key, deleteFromR2, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
@@ -146,12 +146,11 @@ export async function deleteMaintenanceLogAction(id: string) {
   const log = await authorizeLog(id, session.user.id);
   if (!log) throw new Error('Not found');
 
-  // Remove R2 objects before deleting the DB row (FK constraint)
-  const receiptRows = await getReceiptsByLogId(id);
-  await Promise.allSettled(receiptRows.map((r) => deleteFromR2(r.r2_key)));
-  await Promise.allSettled(receiptRows.map((r) => deleteReceipt(r.id)));
-
+  // Delete all receipt rows first (single query, removes FK constraint blocker),
+  // then delete the log, then clean up R2 best-effort after DB ops succeed.
+  const r2Keys = await deleteReceiptsByLogId(id);
   await deleteMaintenanceLog(id);
+  await Promise.allSettled(r2Keys.map((key) => deleteFromR2(key)));
   revalidatePath(`/vehicles/${log.vehicle_id}`);
   redirect(`/vehicles/${log.vehicle_id}/maintenance`);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
@@ -13,19 +13,29 @@ import { deleteMaintenanceLogAction, updateMaintenanceLogAction } from '@/lib/ac
 import type { ActionState } from '@/lib/actions/state';
 
 function DeleteButton({ id }: { id: string }) {
+  const [pending, setPending] = useState(false);
+
+  async function handleDelete() {
+    if (!confirm('Delete this service record?')) return;
+    setPending(true);
+    try {
+      await deleteMaintenanceLogAction(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete. Please try again.');
+      setPending(false);
+    }
+  }
+
   return (
     <Button
       type="button"
       variant="destructive"
       className="ml-auto"
-      onClick={async () => {
-        if (confirm('Delete this service record?')) {
-          await deleteMaintenanceLogAction(id);
-        }
-      }}
+      disabled={pending}
+      onClick={handleDelete}
     >
       <Trash2 className="size-4" />
-      Delete
+      {pending ? 'Deleting…' : 'Delete'}
     </Button>
   );
 }
