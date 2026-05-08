@@ -23,28 +23,16 @@ ENV MALLOC_ARENA_MAX=2
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-COPY --from=builder --chown=nextjs:nodejs /app/drizzle-sqlite ./drizzle-sqlite
-# Explicitly copy better-sqlite3 native addon — Next.js standalone may not
-# include it automatically, and it must match the glibc runtime (node:20-slim).
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/drizzle-sqlite ./drizzle-sqlite
+# Explicitly copy better-sqlite3 native addon compiled for glibc (node:20-slim).
+COPY --from=deps /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+
 RUN mkdir -p /app/data
-
-# gosu allows the entrypoint to fix volume ownership (root-owned by Railway)
-# then cleanly drop privileges to the nextjs user before exec.
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
-
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
 
-# Container starts as root so entrypoint can chown the mounted volume,
-# then gosu drops to nextjs for the actual node process.
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["node", "--max-old-space-size=384", "server.js"]
