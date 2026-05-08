@@ -117,11 +117,13 @@ export function FuelClient({
   initialLogs,
   receiptsByLogId,
   r2Configured,
+  effectiveMileage,
 }: {
   vehicle: Vehicle;
   initialLogs: FuelLog[];
   receiptsByLogId: Record<string, FuelReceipt[]>;
   r2Configured: boolean;
+  effectiveMileage?: number | null;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -226,7 +228,7 @@ export function FuelClient({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mileage">Odometer *</Label>
-                  <Input id="mileage" name="mileage" type="number" placeholder="65000" required />
+                  <Input id="mileage" name="mileage" type="number" placeholder={effectiveMileage != null ? String(effectiveMileage) : '65000'} required />
                 </div>
               </div>
 
