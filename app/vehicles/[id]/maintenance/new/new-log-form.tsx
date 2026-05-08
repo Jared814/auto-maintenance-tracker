@@ -24,10 +24,12 @@ export function NewLogForm({
   vehicleId,
   types,
   r2Configured,
+  defaultMileage,
 }: {
   vehicleId: string;
   types: MaintenanceType[];
   r2Configured: boolean;
+  defaultMileage?: number | null;
 }) {
   const addLogWithVehicleId = addMaintenanceLogAction.bind(null, vehicleId);
   const [state, formAction] = useActionState<ActionState, FormData>(addLogWithVehicleId, null);
@@ -122,7 +124,7 @@ export function NewLogForm({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="mileage_at_service">Mileage *</Label>
-              <Input id="mileage_at_service" name="mileage_at_service" type="number" placeholder="65000" required />
+              <Input id="mileage_at_service" name="mileage_at_service" type="number" placeholder="65000" defaultValue={defaultMileage ?? undefined} required />
             </div>
           </div>
 
