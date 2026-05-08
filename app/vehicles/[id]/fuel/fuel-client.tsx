@@ -126,13 +126,22 @@ export function FuelClient({
   effectiveMileage?: number | null;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
+  const [mileageValue, setMileageValue] = useState('');
+  const [fuelQuantityValue, setFuelQuantityValue] = useState('');
+  const [pricePerUnitValue, setPricePerUnitValue] = useState('');
+
+  const [selectedOdoFiles, setSelectedOdoFiles] = useState<File[]>([]);
+  const [compressingOdo, setCompressingOdo] = useState(false);
+  const [scanningOdo, setScanningOdo] = useState(false);
+  const [odoScanError, setOdoScanError] = useState<string | null>(null);
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressing, setCompressing] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [fuelQuantityValue, setFuelQuantityValue] = useState('');
-  const [pricePerUnitValue, setPricePerUnitValue] = useState('');
+
   const formRef = useRef<HTMLFormElement>(null);
+  const odoFileInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localReceipts, setLocalReceipts] = useState(receiptsByLogId);
 
@@ -143,12 +152,50 @@ export function FuelClient({
     if (state && 'success' in state) {
       formRef.current?.reset();
       setUnit('gallons');
-      setSelectedFiles([]);
+      setMileageValue('');
       setFuelQuantityValue('');
       setPricePerUnitValue('');
+      setSelectedOdoFiles([]);
+      setSelectedFiles([]);
+      setOdoScanError(null);
       setScanError(null);
     }
   }, [state]);
+
+  async function handleOdoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = Array.from(e.target.files ?? []);
+    if (raw.length === 0) return;
+    setCompressingOdo(true);
+    try {
+      const compressed = await Promise.all(
+        raw.map(async (file) => {
+          const result = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true });
+          return new File([result], file.name, { type: result.type });
+        })
+      );
+      setSelectedOdoFiles((prev) => {
+        const merged = [...prev, ...compressed];
+        syncOdoInput(merged);
+        return merged;
+      });
+      if (compressed[0]) handleScanOdometer(compressed[0]);
+    } finally {
+      setCompressingOdo(false);
+    }
+  }
+
+  function syncOdoInput(files: File[]) {
+    if (!odoFileInputRef.current) return;
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    odoFileInputRef.current.files = dt.files;
+  }
+
+  function removeOdoFile(index: number) {
+    const updated = selectedOdoFiles.filter((_, i) => i !== index);
+    setSelectedOdoFiles(updated);
+    syncOdoInput(updated);
+  }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
@@ -185,6 +232,35 @@ export function FuelClient({
     syncInput(updated);
   }
 
+  async function handleScanOdometer(file: File) {
+    setOdoScanError(null);
+    setScanningOdo(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/ai/extract-fuel-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: dataUrl, mediaType: file.type || 'image/jpeg', scanType: 'odometer' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Scan failed' }));
+        setOdoScanError(err.error ?? 'Scan failed');
+        return;
+      }
+      const data = await res.json();
+      if (data.mileage != null) setMileageValue(String(data.mileage));
+    } catch {
+      setOdoScanError('Could not read odometer. Enter mileage manually.');
+    } finally {
+      setScanningOdo(false);
+    }
+  }
+
   async function handleScanReceipt(file: File) {
     setScanError(null);
     setScanning(true);
@@ -198,7 +274,7 @@ export function FuelClient({
       const res = await fetch('/api/ai/extract-fuel-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: dataUrl, mediaType: file.type || 'image/jpeg' }),
+        body: JSON.stringify({ imageBase64: dataUrl, mediaType: file.type || 'image/jpeg', scanType: 'receipt' }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Scan failed' }));
@@ -267,7 +343,7 @@ export function FuelClient({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mileage">Odometer *</Label>
-                  <Input id="mileage" name="mileage" type="number" placeholder={effectiveMileage != null ? String(effectiveMileage) : '65000'} required />
+                  <Input id="mileage" name="mileage" type="number" placeholder={effectiveMileage != null ? String(effectiveMileage) : '65000'} required value={mileageValue} onChange={(e) => setMileageValue(e.target.value)} />
                 </div>
               </div>
 
@@ -321,45 +397,68 @@ export function FuelClient({
               </div>
 
               {r2Configured && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>Receipt Photo</Label>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
-                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
-                      {compressing ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3" />}
-                      {compressing ? 'Compressing…' : 'Add photo'}
-                    </button>
+                <div className="space-y-3">
+                  {/* Odometer photo */}
+                  <div className="space-y-1.5">
+                    <Label>Odometer Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <input ref={odoFileInputRef} type="file" name="photos" accept="image/*" className="hidden" onChange={handleOdoFileChange} />
+                    {selectedOdoFiles.length === 0 ? (
+                      <button type="button" onClick={() => odoFileInputRef.current?.click()} disabled={compressingOdo}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
+                        {compressingOdo ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                        {compressingOdo ? 'Compressing…' : 'Attach odometer'}
+                      </button>
+                    ) : (
+                      <div className="space-y-1">
+                        {selectedOdoFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
+                            <span className="truncate text-muted-foreground">{f.name}</span>
+                            <button type="button" onClick={() => removeOdoFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {scanningOdo && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Loader2 className="size-3 animate-spin" />
+                        Reading odometer…
+                      </div>
+                    )}
+                    {odoScanError && <p className="text-xs text-amber-600">{odoScanError}</p>}
                   </div>
-                  <input ref={fileInputRef} type="file" name="photos" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                  {scanning && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Loader2 className="size-3 animate-spin" />
-                      Scanning receipt…
-                    </div>
-                  )}
-                  {scanError && (
-                    <p className="text-xs text-amber-600">{scanError}</p>
-                  )}
-                  {selectedFiles.length === 0 ? (
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
-                      {compressing ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
-                      {compressing ? 'Compressing…' : 'Attach receipt'}
-                    </button>
-                  ) : (
-                    <div className="space-y-1">
-                      {selectedFiles.map((f, i) => (
-                        <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
-                          <span className="truncate text-muted-foreground">{f.name}</span>
-                          <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
+                  {/* Receipt / fuel pump photo */}
+                  <div className="space-y-1.5">
+                    <Label>Receipt or Pump Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <input ref={fileInputRef} type="file" name="photos" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    {selectedFiles.length === 0 ? (
+                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
+                        {compressing ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                        {compressing ? 'Compressing…' : 'Attach receipt / fuel pump'}
+                      </button>
+                    ) : (
+                      <div className="space-y-1">
+                        {selectedFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
+                            <span className="truncate text-muted-foreground">{f.name}</span>
+                            <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {scanning && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Loader2 className="size-3 animate-spin" />
+                        Scanning receipt…
+                      </div>
+                    )}
+                    {scanError && <p className="text-xs text-amber-600">{scanError}</p>}
+                  </div>
                 </div>
               )}
 
-              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || scanning) ? 'opacity-50 pointer-events-none' : ''} />
+              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || compressingOdo || scanning || scanningOdo) ? 'opacity-50 pointer-events-none' : ''} />
             </form>
           </CardContent>
         </Card>
