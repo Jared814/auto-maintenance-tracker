@@ -9,23 +9,25 @@ const ReceiptSchema = z.object({
   fuel_unit: z.enum(['gallons', 'liters']).nullable(),
   price_per_unit: z.string().nullable(),
   total_cost: z.string().nullable(),
+  filled_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null),
 });
 
 const OdometerSchema = z.object({
   mileage: z.number().nullable(),
 });
 
-const NULL_RECEIPT = { fuel_quantity: null, fuel_unit: null, price_per_unit: null, total_cost: null };
+const NULL_RECEIPT = { fuel_quantity: null, fuel_unit: null, price_per_unit: null, total_cost: null, filled_at: null };
 const NULL_ODOMETER = { mileage: null };
 
 const RECEIPT_PROMPT = `Look at this fuel or gas station receipt or fuel pump display. Extract these fields and reply with ONLY a JSON object, no other text:
-{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string like "3.499" or null>, "total_cost": <string like "43.21" or null>}
+{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string like "3.499" or null>, "total_cost": <string like "43.21" or null>, "filled_at": <string like "2026-05-08" or null>}
 
 Rules:
 - fuel_quantity: volume purchased as a number (e.g. 12.345)
 - fuel_unit: "gallons" if receipt shows GAL/GALLONS, "liters" if L/LITRES
 - price_per_unit: price per gallon/liter as a string without currency symbol
 - total_cost: total fuel charge as a string without currency symbol
+- filled_at: the transaction date in YYYY-MM-DD format (e.g. "2026-05-08"); use null if not clearly visible
 - Use null for any field not visible`;
 
 const ODOMETER_PROMPT = `Look at this vehicle odometer or instrument cluster. Read the mileage and reply with ONLY a JSON object, no other text:

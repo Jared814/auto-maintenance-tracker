@@ -126,6 +126,7 @@ export function FuelClient({
   effectiveMileage?: number | null;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
+  const [filledAtValue, setFilledAtValue] = useState(getToday());
   const [mileageValue, setMileageValue] = useState('');
   const [fuelQuantityValue, setFuelQuantityValue] = useState('');
   const [pricePerUnitValue, setPricePerUnitValue] = useState('');
@@ -152,6 +153,7 @@ export function FuelClient({
     if (state && 'success' in state) {
       formRef.current?.reset();
       setUnit('gallons');
+      setFilledAtValue(getToday());
       setMileageValue('');
       setFuelQuantityValue('');
       setPricePerUnitValue('');
@@ -285,6 +287,7 @@ export function FuelClient({
       if (data.fuel_quantity != null) setFuelQuantityValue(String(data.fuel_quantity));
       if (data.fuel_unit) setUnit(data.fuel_unit as 'gallons' | 'liters');
       if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
+      if (data.filled_at) setFilledAtValue(data.filled_at);
     } catch {
       setScanError('Could not scan receipt. Enter values manually.');
     } finally {
@@ -339,7 +342,7 @@ export function FuelClient({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="filled_at">Date *</Label>
-                  <Input id="filled_at" name="filled_at" type="date" defaultValue={getToday()} required />
+                  <Input id="filled_at" name="filled_at" type="date" value={filledAtValue} onChange={(e) => setFilledAtValue(e.target.value)} required />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="mileage">Odometer *</Label>
@@ -394,6 +397,19 @@ export function FuelClient({
                   <span className="text-muted-foreground font-normal">(optional)</span>
                 </Label>
                 <Input id="price_per_unit" name="price_per_unit" type="text" placeholder="3.49" value={pricePerUnitValue} onChange={(e) => setPricePerUnitValue(e.target.value)} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="notes">
+                  Notes <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={2}
+                  placeholder="Trip, purpose, location…"
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                />
               </div>
 
               {r2Configured && (
@@ -526,6 +542,9 @@ export function FuelClient({
                           {log.mileage.toLocaleString()} {vehicle.units}
                           {totalCost && ` · $${totalCost}`}
                         </p>
+                        {log.notes && (
+                          <p className="text-xs text-muted-foreground italic mt-0.5">{log.notes}</p>
+                        )}
                       </div>
                       <Button type="button" variant="ghost" size="icon-sm"
                         onClick={async () => { if (confirm('Delete this fill-up record?')) await deleteFuelLogAction(log.id); }}>
