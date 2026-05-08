@@ -2,13 +2,14 @@
 
 import { useActionState, useRef, useState } from 'react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SubmitButton } from '@/components/submit-button';
-import { ChevronLeft, ImagePlus, X } from 'lucide-react';
+import { ChevronLeft, ImagePlus, Loader2, X } from 'lucide-react';
 import { getToday } from '@/lib/dates';
 import { addMaintenanceLogAction } from '@/lib/actions/maintenance';
 import type { ActionState } from '@/lib/actions/state';
@@ -31,6 +32,7 @@ export function NewLogForm({
   const addLogWithVehicleId = addMaintenanceLogAction.bind(null, vehicleId);
   const [state, formAction] = useActionState<ActionState, FormData>(addLogWithVehicleId, null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const grouped = types.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
@@ -39,19 +41,42 @@ export function NewLogForm({
     return acc;
   }, {});
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setSelectedFiles(Array.from(e.target.files ?? []));
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = Array.from(e.target.files ?? []);
+    if (raw.length === 0) return;
+    setCompressing(true);
+    try {
+      const compressed = await Promise.all(
+        raw.map(async (file) => {
+          const result = await imageCompression(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+          });
+          return new File([result], file.name, { type: result.type });
+        })
+      );
+      setSelectedFiles((prev) => {
+        const merged = [...prev, ...compressed];
+        syncInput(merged);
+        return merged;
+      });
+    } finally {
+      setCompressing(false);
+    }
+  }
+
+  function syncInput(files: File[]) {
+    if (!fileInputRef.current) return;
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    fileInputRef.current.files = dt.files;
   }
 
   function removeFile(index: number) {
     const updated = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(updated);
-    // Sync the actual file input via DataTransfer
-    if (fileInputRef.current) {
-      const dt = new DataTransfer();
-      updated.forEach((f) => dt.items.add(f));
-      fileInputRef.current.files = dt.files;
-    }
+    syncInput(updated);
   }
 
   return (
@@ -136,10 +161,13 @@ export function NewLogForm({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  disabled={compressing}
+                  className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
                 >
-                  <ImagePlus className="size-3.5" />
-                  Add photos
+                  {compressing
+                    ? <Loader2 className="size-3.5 animate-spin" />
+                    : <ImagePlus className="size-3.5" />}
+                  {compressing ? 'Compressing…' : 'Add photos'}
                 </button>
               ) : null}
             </div>
@@ -160,10 +188,13 @@ export function NewLogForm({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-6 text-sm text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors"
+                    disabled={compressing}
+                    className="w-full flex flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-6 text-sm text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50"
                   >
-                    <ImagePlus className="size-5" />
-                    Receipts, product labels, or reference images
+                    {compressing
+                      ? <Loader2 className="size-5 animate-spin" />
+                      : <ImagePlus className="size-5" />}
+                    {compressing ? 'Compressing images…' : 'Receipts, product labels, or reference images'}
                   </button>
                 ) : (
                   <div className="space-y-1.5">
@@ -196,7 +227,7 @@ export function NewLogForm({
             <Link href={`/vehicles/${vehicleId}/maintenance`}>
               <Button type="button" variant="outline">Cancel</Button>
             </Link>
-            <SubmitButton label="Save Record" pendingLabel="Saving…" />
+            <SubmitButton label="Save Record" pendingLabel="Saving…" className={compressing ? 'opacity-50 pointer-events-none' : ''} />
           </div>
         </form>
       </div>

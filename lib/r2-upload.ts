@@ -28,26 +28,32 @@ function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/** Build a human-readable R2 key for a receipt/photo. */
+function sanitizeVehicleName(name: string): string {
+  return name.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+/** Build a human-readable R2 key for a photo/receipt. */
 export function buildR2Key(params: {
-  vehicleId: string;
+  vehicleName: string;
   serviceDate: string; // YYYY-MM-DD
   typeSlug: string;    // e.g. "oil-filter-change"
   index: number;
   filename: string;
 }): string {
-  const { vehicleId, serviceDate, typeSlug, index, filename } = params;
+  const { vehicleName, serviceDate, typeSlug, index, filename } = params;
   const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
   const base = filename
     .replace(/\.[^.]+$/, '')
     .replace(/[^a-zA-Z0-9-_]/g, '_')
     .slice(0, 40);
-  return `receipts/${vehicleId}/${serviceDate}_${toSlug(typeSlug)}/${index}_${base}.${ext}`;
+  const vehicle = sanitizeVehicleName(vehicleName) || 'vehicle';
+  return `automaint-images/${vehicle}/${serviceDate}_${toSlug(typeSlug)}/${index}_${base}.${ext}`;
 }
 
 export async function generateUploadUrl(params: {
   accountId: string;
   vehicleId: string;
+  vehicleName?: string;
   logId: string;
   filename: string;
   contentType: string;
@@ -59,15 +65,15 @@ export async function generateUploadUrl(params: {
   const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
   const r2 = await getR2Client();
 
-  const r2Key = params.serviceDate && params.typeSlug
+  const r2Key = params.serviceDate && params.typeSlug && params.vehicleName
     ? buildR2Key({
-        vehicleId: params.vehicleId,
+        vehicleName: params.vehicleName,
         serviceDate: params.serviceDate,
         typeSlug: params.typeSlug,
         index: params.index ?? Date.now(),
         filename: params.filename,
       })
-    : `receipts/${params.accountId}/${params.vehicleId}/${params.logId}_${Date.now()}_${params.filename}`;
+    : `automaint-images/${params.vehicleId}/${params.logId}_${Date.now()}_${params.filename}`;
 
   const uploadUrl = await getSignedUrl(
     r2,

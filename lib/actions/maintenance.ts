@@ -75,7 +75,7 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
         const file = validPhotos[i];
         try {
           const r2Key = buildR2Key({
-            vehicleId,
+            vehicleName: vehicle.name,
             serviceDate,
             typeSlug,
             index: i + 1,

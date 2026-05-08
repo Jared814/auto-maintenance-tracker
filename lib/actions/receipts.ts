@@ -32,6 +32,7 @@ export async function generateUploadUrlAction(filename: string, contentType: str
   return generateUploadUrl({
     accountId: session.user.id,
     vehicleId: log.vehicle_id,
+    vehicleName: vehicle.name,
     logId,
     filename,
     contentType,
