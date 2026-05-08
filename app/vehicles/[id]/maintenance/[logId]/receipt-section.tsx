@@ -83,7 +83,7 @@ export function ReceiptSection({ logId, initialReceipts }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Receipts</h2>
+        <h2 className="text-base font-semibold">Photos</h2>
         <Button
           size="sm"
           variant="outline"
@@ -91,7 +91,7 @@ export function ReceiptSection({ logId, initialReceipts }: Props) {
           disabled={uploading}
         >
           <Upload className="size-4" />
-          {uploading ? 'Uploading…' : 'Upload Receipt'}
+          {uploading ? 'Uploading…' : 'Add Photos'}
         </Button>
         <input
           ref={inputRef}
