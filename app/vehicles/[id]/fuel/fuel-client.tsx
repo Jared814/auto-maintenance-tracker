@@ -2,14 +2,15 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SubmitButton } from '@/components/submit-button';
-import { ChevronLeft, Trash2 } from 'lucide-react';
-import { addFuelLogAction, deleteFuelLogAction } from '@/lib/actions/fuel';
+import { ChevronLeft, ImagePlus, Loader2, Trash2, X } from 'lucide-react';
+import { addFuelLogAction, deleteFuelLogAction, deleteFuelReceiptAction } from '@/lib/actions/fuel';
 import { computeEconomy, avgEconomy } from '@/lib/fuel-economy';
 import { getToday } from '@/lib/dates';
 import { formatDate } from '@/lib/utils';
@@ -24,6 +25,8 @@ type FuelLog = {
   price_per_unit: string | null;
   notes: string | null;
 };
+
+type FuelReceipt = { id: string; r2_url: string; file_name: string | null };
 
 type Vehicle = {
   id: string;
@@ -112,12 +115,20 @@ function LineChart({ points, unitLabel }: { points: { date: string; value: numbe
 export function FuelClient({
   vehicle,
   initialLogs,
+  receiptsByLogId,
+  r2Configured,
 }: {
   vehicle: Vehicle;
   initialLogs: FuelLog[];
+  receiptsByLogId: Record<string, FuelReceipt[]>;
+  r2Configured: boolean;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [compressing, setCompressing] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [localReceipts, setLocalReceipts] = useState(receiptsByLogId);
 
   const addWithVehicleId = addFuelLogAction.bind(null, vehicle.id);
   const [state, formAction] = useActionState<ActionState, FormData>(addWithVehicleId, null);
@@ -126,8 +137,51 @@ export function FuelClient({
     if (state && 'success' in state) {
       formRef.current?.reset();
       setUnit('gallons');
+      setSelectedFiles([]);
     }
   }, [state]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = Array.from(e.target.files ?? []);
+    if (raw.length === 0) return;
+    setCompressing(true);
+    try {
+      const compressed = await Promise.all(
+        raw.map(async (file) => {
+          const result = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true });
+          return new File([result], file.name, { type: result.type });
+        })
+      );
+      setSelectedFiles((prev) => {
+        const merged = [...prev, ...compressed];
+        syncInput(merged);
+        return merged;
+      });
+    } finally {
+      setCompressing(false);
+    }
+  }
+
+  function syncInput(files: File[]) {
+    if (!fileInputRef.current) return;
+    const dt = new DataTransfer();
+    files.forEach((f) => dt.items.add(f));
+    fileInputRef.current.files = dt.files;
+  }
+
+  function removeFile(index: number) {
+    const updated = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(updated);
+    syncInput(updated);
+  }
+
+  async function handleDeleteReceipt(logId: string, receiptId: string) {
+    await deleteFuelReceiptAction(receiptId);
+    setLocalReceipts((prev) => ({
+      ...prev,
+      [logId]: (prev[logId] ?? []).filter((r) => r.id !== receiptId),
+    }));
+  }
 
   const unitLabel = vehicle.units === 'miles' ? 'MPG' : 'L/100km';
   const economyPoints = computeEconomy(initialLogs, vehicle.units);
@@ -158,7 +212,7 @@ export function FuelClient({
             <CardTitle className="text-base">Log a Fill-Up</CardTitle>
           </CardHeader>
           <CardContent>
-            <form ref={formRef} action={formAction} className="space-y-3">
+            <form ref={formRef} action={formAction} encType="multipart/form-data" className="space-y-3">
               {state && 'error' in state && (
                 <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
               )}
@@ -223,7 +277,37 @@ export function FuelClient({
                 <Input id="price_per_unit" name="price_per_unit" type="text" placeholder="3.49" />
               </div>
 
-              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" />
+              {r2Configured && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label>Receipt Photo</Label>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50">
+                      {compressing ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3" />}
+                      {compressing ? 'Compressing…' : 'Add photo'}
+                    </button>
+                  </div>
+                  <input ref={fileInputRef} type="file" name="photos" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                  {selectedFiles.length === 0 ? (
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
+                      {compressing ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
+                      {compressing ? 'Compressing…' : 'Attach receipt'}
+                    </button>
+                  ) : (
+                    <div className="space-y-1">
+                      {selectedFiles.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
+                          <span className="truncate text-muted-foreground">{f.name}</span>
+                          <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={compressing ? 'opacity-50 pointer-events-none' : ''} />
             </form>
           </CardContent>
         </Card>
@@ -275,37 +359,43 @@ export function FuelClient({
                     : null;
 
                 return (
-                  <div
-                    key={log.id}
-                    className="flex items-center justify-between bg-card border border-border rounded-lg px-3 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{formatDate(log.filled_at)}</p>
-                        {econ !== undefined && (
-                          <span className="text-xs font-semibold text-primary">
-                            {econ.toFixed(1)} {unitLabel}
-                          </span>
-                        )}
+                  <div key={log.id} className="bg-card border border-border rounded-lg px-3 py-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{formatDate(log.filled_at)}</p>
+                          {econ !== undefined && (
+                            <span className="text-xs font-semibold text-primary">
+                              {econ.toFixed(1)} {unitLabel}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {log.fuel_quantity} {log.fuel_unit} &middot;{' '}
+                          {log.mileage.toLocaleString()} {vehicle.units}
+                          {totalCost && ` · $${totalCost}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {log.fuel_quantity} {log.fuel_unit} &middot;{' '}
-                        {log.mileage.toLocaleString()} {vehicle.units}
-                        {totalCost && ` · $${totalCost}`}
-                      </p>
+                      <Button type="button" variant="ghost" size="icon-sm"
+                        onClick={async () => { if (confirm('Delete this fill-up record?')) await deleteFuelLogAction(log.id); }}>
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={async () => {
-                        if (confirm('Delete this fill-up record?')) {
-                          await deleteFuelLogAction(log.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    {(localReceipts[log.id] ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {(localReceipts[log.id] ?? []).map((receipt) => (
+                          <div key={receipt.id} className="relative group w-16 h-16 rounded-md overflow-hidden border border-border">
+                            <a href={receipt.r2_url} target="_blank" rel="noopener noreferrer">
+                              <img src={receipt.r2_url} alt={receipt.file_name ?? 'Receipt'} className="w-full h-full object-cover" />
+                            </a>
+                            <button onClick={() => handleDeleteReceipt(log.id, receipt.id)}
+                              className="absolute top-0.5 right-0.5 size-5 rounded-full bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

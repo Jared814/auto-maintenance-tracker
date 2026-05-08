@@ -18,3 +18,4 @@ export const fuelLogs = mod.fuelLogs;
 export const accountTypeOverrides = mod.accountTypeOverrides;
 export const accountDisabledTypes = mod.accountDisabledTypes;
 export const receipts = mod.receipts;
+export const fuelReceipts = mod.fuelReceipts;

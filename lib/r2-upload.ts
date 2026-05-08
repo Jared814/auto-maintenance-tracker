@@ -50,6 +50,19 @@ export function buildR2Key(params: {
   return `automaint-images/${vehicle}/${serviceDate}_${toSlug(typeSlug)}/${index}_${base}.${ext}`;
 }
 
+/** Build an R2 key for a fuel receipt. */
+export function buildFuelR2Key(params: {
+  vehicleName: string;
+  date: string; // YYYY-MM-DD
+  filename: string;
+}): string {
+  const { vehicleName, date, filename } = params;
+  const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+  const base = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_').slice(0, 40);
+  const vehicle = sanitizeVehicleName(vehicleName) || 'vehicle';
+  return `automaint-images/${vehicle}/fuel_receipts/${date}_${base}.${ext}`;
+}
+
 export async function generateUploadUrl(params: {
   accountId: string;
   vehicleId: string;

@@ -99,3 +99,15 @@ export const receipts = pgTable('receipts', {
 }, (table) => [
   index('idx_receipts_log_id').on(table.maintenance_log_id),
 ]);
+
+export const fuelReceipts = pgTable('fuel_receipts', {
+  id: text('id').primaryKey(),
+  fuel_log_id: text('fuel_log_id').references(() => fuelLogs.id).notNull(),
+  r2_key: text('r2_key').notNull(),
+  r2_url: text('r2_url').notNull(),
+  file_name: text('file_name'),
+  file_type: text('file_type'),
+  uploaded_at: text('uploaded_at').notNull(),
+}, (table) => [
+  index('idx_fuel_receipts_log_id').on(table.fuel_log_id),
+]);

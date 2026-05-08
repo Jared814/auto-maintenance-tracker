@@ -1,7 +1,7 @@
 import { eq, and, desc, isNull, or, notInArray, inArray } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 import { db, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, accountDisabledTypes, accountTypeOverrides } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, accountDisabledTypes, accountTypeOverrides } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -487,4 +487,40 @@ export async function getMaintenanceLogCountsByVehicleIds(
     }
   }
   return result;
+}
+
+// ---- FUEL RECEIPTS ----
+
+export async function createFuelReceipt(data: {
+  fuel_log_id: string;
+  r2_key: string;
+  r2_url: string;
+  file_name?: string | null;
+  file_type?: string | null;
+}) {
+  const [receipt] = await db.insert(fuelReceipts).values({
+    id: nanoid(),
+    ...data,
+    uploaded_at: getNow(),
+  }).returning();
+  return receipt;
+}
+
+export async function getFuelReceiptsByLogId(logId: string) {
+  return db.select().from(fuelReceipts).where(eq(fuelReceipts.fuel_log_id, logId));
+}
+
+export async function getFuelReceiptsByVehicleId(vehicleId: string) {
+  return db
+    .select({ receipt: fuelReceipts, fuelLogId: fuelLogs.id })
+    .from(fuelReceipts)
+    .innerJoin(fuelLogs, eq(fuelReceipts.fuel_log_id, fuelLogs.id))
+    .where(eq(fuelLogs.vehicle_id, vehicleId));
+}
+
+export async function deleteFuelReceipt(id: string) {
+  const [receipt] = await db.select().from(fuelReceipts).where(eq(fuelReceipts.id, id)).limit(1);
+  if (!receipt) return null;
+  await db.delete(fuelReceipts).where(eq(fuelReceipts.id, id));
+  return receipt;
 }
