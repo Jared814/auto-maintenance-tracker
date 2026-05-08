@@ -1,9 +1,9 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, deleteReceipt, getMaintenanceLogById, getMaintenanceTypes, getReceiptsByLogId, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
-import { buildR2Key, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
+import { buildR2Key, deleteFromR2, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { ActionState } from '@/lib/actions/state';
@@ -145,6 +145,11 @@ export async function deleteMaintenanceLogAction(id: string) {
 
   const log = await authorizeLog(id, session.user.id);
   if (!log) throw new Error('Not found');
+
+  // Remove R2 objects before deleting the DB row (FK constraint)
+  const receiptRows = await getReceiptsByLogId(id);
+  await Promise.allSettled(receiptRows.map((r) => deleteFromR2(r.r2_key)));
+  await Promise.allSettled(receiptRows.map((r) => deleteReceipt(r.id)));
 
   await deleteMaintenanceLog(id);
   revalidatePath(`/vehicles/${log.vehicle_id}`);
