@@ -128,6 +128,10 @@ export function FuelClient({
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressing, setCompressing] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [fuelQuantityValue, setFuelQuantityValue] = useState('');
+  const [pricePerUnitValue, setPricePerUnitValue] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localReceipts, setLocalReceipts] = useState(receiptsByLogId);
@@ -140,6 +144,9 @@ export function FuelClient({
       formRef.current?.reset();
       setUnit('gallons');
       setSelectedFiles([]);
+      setFuelQuantityValue('');
+      setPricePerUnitValue('');
+      setScanError(null);
     }
   }, [state]);
 
@@ -159,6 +166,7 @@ export function FuelClient({
         syncInput(merged);
         return merged;
       });
+      if (compressed[0]) handleScanReceipt(compressed[0]);
     } finally {
       setCompressing(false);
     }
@@ -175,6 +183,37 @@ export function FuelClient({
     const updated = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(updated);
     syncInput(updated);
+  }
+
+  async function handleScanReceipt(file: File) {
+    setScanError(null);
+    setScanning(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/ai/extract-fuel-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: dataUrl, mediaType: file.type || 'image/jpeg' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Scan failed' }));
+        setScanError(err.error ?? 'Scan failed');
+        return;
+      }
+      const data = await res.json();
+      if (data.fuel_quantity != null) setFuelQuantityValue(String(data.fuel_quantity));
+      if (data.fuel_unit) setUnit(data.fuel_unit as 'gallons' | 'liters');
+      if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
+    } catch {
+      setScanError('Could not scan receipt. Enter values manually.');
+    } finally {
+      setScanning(false);
+    }
   }
 
   async function handleDeleteReceipt(logId: string, receiptId: string) {
@@ -243,6 +282,8 @@ export function FuelClient({
                     placeholder={unit === 'gallons' ? '12.5' : '47.3'}
                     required
                     className="flex-1"
+                    value={fuelQuantityValue}
+                    onChange={(e) => setFuelQuantityValue(e.target.value)}
                   />
                   <div className="flex border border-input rounded-lg overflow-hidden shrink-0">
                     <button
@@ -276,7 +317,7 @@ export function FuelClient({
                   Price per {unit === 'gallons' ? 'Gallon' : 'Liter'}{' '}
                   <span className="text-muted-foreground font-normal">(optional)</span>
                 </Label>
-                <Input id="price_per_unit" name="price_per_unit" type="text" placeholder="3.49" />
+                <Input id="price_per_unit" name="price_per_unit" type="text" placeholder="3.49" value={pricePerUnitValue} onChange={(e) => setPricePerUnitValue(e.target.value)} />
               </div>
 
               {r2Configured && (
@@ -290,6 +331,15 @@ export function FuelClient({
                     </button>
                   </div>
                   <input ref={fileInputRef} type="file" name="photos" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                  {scanning && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="size-3 animate-spin" />
+                      Scanning receipt…
+                    </div>
+                  )}
+                  {scanError && (
+                    <p className="text-xs text-amber-600">{scanError}</p>
+                  )}
                   {selectedFiles.length === 0 ? (
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
                       className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
@@ -309,7 +359,7 @@ export function FuelClient({
                 </div>
               )}
 
-              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={compressing ? 'opacity-50 pointer-events-none' : ''} />
+              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || scanning) ? 'opacity-50 pointer-events-none' : ''} />
             </form>
           </CardContent>
         </Card>
