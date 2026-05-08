@@ -3,6 +3,7 @@
 import { auth } from '@/auth';
 import { createReceipt, deleteReceipt, getMaintenanceLogById, getReceiptById, getVehicleById } from '@/lib/db';
 import { deleteFromR2, generateUploadUrl } from '@/lib/r2-upload';
+import { getMaintenanceTypes } from '@/lib/db';
 import { CreateReceiptSchema } from '@/lib/schemas';
 import { revalidatePath } from 'next/cache';
 
@@ -22,12 +23,21 @@ export async function generateUploadUrlAction(filename: string, contentType: str
   const vehicle = await getVehicleById(log.vehicle_id, session.user.id);
   if (!vehicle) throw new Error('Unauthorized');
 
+  // Resolve type name for human-readable R2 key
+  const allTypes = await getMaintenanceTypes(session.user.id);
+  const serviceType = allTypes.find((t) => t.id === log.maintenance_type_id);
+  const typeSlug = serviceType?.name ?? 'service';
+  const serviceDate = log.serviced_at.slice(0, 10);
+
   return generateUploadUrl({
     accountId: session.user.id,
     vehicleId: log.vehicle_id,
     logId,
     filename,
     contentType,
+    serviceDate,
+    typeSlug,
+    index: Date.now(),
   });
 }
 

@@ -1,8 +1,9 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, deleteMaintenanceLog, getMaintenanceLogById, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
+import { buildR2Key, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { ActionState } from '@/lib/actions/state';
@@ -42,8 +43,9 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
   const vehicle = await getVehicleById(parsed.data.vehicle_id, session.user.id);
   if (!vehicle) return { error: 'Vehicle not found' };
 
+  let logId: string;
   try {
-    await createMaintenanceLog({
+    const log = await createMaintenanceLog({
       ...parsed.data,
       next_due_mileage: parsed.data.next_due_mileage ?? null,
       next_due_date: parsed.data.next_due_date ?? null,
@@ -51,14 +53,52 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
       shop: parsed.data.shop ?? null,
       notes: parsed.data.notes ?? null,
     });
-
+    logId = log.id;
     revalidatePath(`/vehicles/${vehicleId}`);
   } catch (error) {
     console.error('[addMaintenanceLogAction]', error);
     return { error: 'Failed to create log' };
   }
 
-  redirect(`/vehicles/${vehicleId}/maintenance`);
+  // Upload photos if R2 is configured and files were attached
+  if (isR2Configured()) {
+    const photos = formData.getAll('photos') as File[];
+    const validPhotos = photos.filter((f) => f && f.size > 0);
+    if (validPhotos.length > 0) {
+      // Get service type name for the R2 key slug
+      const allTypes = await getMaintenanceTypes(session.user.id);
+      const serviceType = allTypes.find((t) => t.id === parsed.data.maintenance_type_id);
+      const typeSlug = serviceType?.name ?? 'service';
+      const serviceDate = parsed.data.serviced_at.slice(0, 10);
+
+      for (let i = 0; i < validPhotos.length; i++) {
+        const file = validPhotos[i];
+        try {
+          const r2Key = buildR2Key({
+            vehicleId,
+            serviceDate,
+            typeSlug,
+            index: i + 1,
+            filename: file.name,
+          });
+          const fileBuffer = Buffer.from(await file.arrayBuffer());
+          const publicUrl = await uploadPhotoToR2({ fileBuffer, contentType: file.type || 'image/jpeg', r2Key });
+          await createReceipt({
+            maintenance_log_id: logId,
+            r2_key: r2Key,
+            r2_url: publicUrl,
+            file_name: file.name,
+            file_type: file.type || null,
+          });
+        } catch (err) {
+          console.error('[addMaintenanceLogAction] photo upload failed:', err);
+          // Continue — don't fail the whole submission over a photo
+        }
+      }
+    }
+  }
+
+  redirect(`/vehicles/${vehicleId}/maintenance/${logId}`);
 }
 
 export async function updateMaintenanceLogAction(id: string, prevState: ActionState, formData: FormData) {

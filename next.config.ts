@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['better-sqlite3'],
   experimental: {
     serverMinification: true,
+    serverActions: { bodySizeLimit: '20mb' },
   },
   async headers() {
     return [

@@ -15,18 +15,59 @@ async function getR2Client() {
   return _r2;
 }
 
+export function isR2Configured(): boolean {
+  return !!(
+    process.env.CLOUDFLARE_R2_ACCOUNT_ID &&
+    process.env.CLOUDFLARE_R2_ACCESS_KEY_ID &&
+    process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY &&
+    process.env.CLOUDFLARE_R2_BUCKET_NAME
+  );
+}
+
+function toSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+/** Build a human-readable R2 key for a receipt/photo. */
+export function buildR2Key(params: {
+  vehicleId: string;
+  serviceDate: string; // YYYY-MM-DD
+  typeSlug: string;    // e.g. "oil-filter-change"
+  index: number;
+  filename: string;
+}): string {
+  const { vehicleId, serviceDate, typeSlug, index, filename } = params;
+  const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+  const base = filename
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^a-zA-Z0-9-_]/g, '_')
+    .slice(0, 40);
+  return `receipts/${vehicleId}/${serviceDate}_${toSlug(typeSlug)}/${index}_${base}.${ext}`;
+}
+
 export async function generateUploadUrl(params: {
   accountId: string;
   vehicleId: string;
   logId: string;
   filename: string;
   contentType: string;
+  serviceDate?: string;
+  typeSlug?: string;
+  index?: number;
 }): Promise<{ uploadUrl: string; publicUrl: string; r2Key: string }> {
   const { PutObjectCommand } = await import('@aws-sdk/client-s3');
   const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
   const r2 = await getR2Client();
-  const ts = Date.now();
-  const r2Key = `receipts/${params.accountId}/${params.vehicleId}/${params.logId}_${ts}_${params.filename}`;
+
+  const r2Key = params.serviceDate && params.typeSlug
+    ? buildR2Key({
+        vehicleId: params.vehicleId,
+        serviceDate: params.serviceDate,
+        typeSlug: params.typeSlug,
+        index: params.index ?? Date.now(),
+        filename: params.filename,
+      })
+    : `receipts/${params.accountId}/${params.vehicleId}/${params.logId}_${Date.now()}_${params.filename}`;
 
   const uploadUrl = await getSignedUrl(
     r2,
@@ -40,6 +81,25 @@ export async function generateUploadUrl(params: {
 
   const publicUrl = `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${r2Key}`;
   return { uploadUrl, publicUrl, r2Key };
+}
+
+/** Upload a file directly from the server (no presigned URL needed). */
+export async function uploadPhotoToR2(params: {
+  fileBuffer: Buffer;
+  contentType: string;
+  r2Key: string;
+}): Promise<string> {
+  const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+  const r2 = await getR2Client();
+  await r2.send(
+    new PutObjectCommand({
+      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
+      Key: params.r2Key,
+      Body: params.fileBuffer,
+      ContentType: params.contentType,
+    })
+  );
+  return `${process.env.CLOUDFLARE_R2_PUBLIC_URL}/${params.r2Key}`;
 }
 
 export async function deleteFromR2(r2Key: string): Promise<void> {

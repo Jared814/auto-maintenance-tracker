@@ -12,5 +12,7 @@ export default async function NewMaintenanceLogPage({ params }: { params: Promis
   const { id } = await params;
   const types = await getMaintenanceTypes(session.user.id);
 
-  return <NewLogForm vehicleId={id} types={types} />;
+  const r2Configured = !!(process.env.CLOUDFLARE_R2_ACCOUNT_ID && process.env.CLOUDFLARE_R2_BUCKET_NAME);
+
+  return <NewLogForm vehicleId={id} types={types} r2Configured={r2Configured} />;
 }
