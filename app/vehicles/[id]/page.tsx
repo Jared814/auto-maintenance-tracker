@@ -54,6 +54,12 @@ export default async function VehicleDetailPage({
   const lastMpg = economyPoints.length > 0 ? economyPoints[economyPoints.length - 1].value : null;
   const unitLabel = vehicle.units === 'miles' ? 'MPG' : 'L/100km';
 
+  const effectiveMileage = Math.max(
+    vehicle.current_mileage ?? 0,
+    ...logs.map((l) => l.mileage_at_service),
+    ...fuelLogs.map((f) => f.mileage),
+  ) || null;
+
   // Build status for each type
   const statusByType = allTypes.map((type) => {
     const latestLog =
@@ -61,7 +67,7 @@ export default async function VehicleDetailPage({
         .filter((l) => l.maintenance_type_id === type.id)
         .sort((a, b) => b.serviced_at.localeCompare(a.serviced_at))[0] ?? null;
 
-    const result = calculateMaintenanceStatus(latestLog, type, vehicle.current_mileage);
+    const result = calculateMaintenanceStatus(latestLog, type, effectiveMileage);
     return { type, latestLog, ...result };
   });
 
@@ -137,7 +143,7 @@ export default async function VehicleDetailPage({
         <div className="flex flex-wrap gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Mileage: </span>
-            <span className="font-medium">{formatMileage(vehicle.current_mileage, vehicle.units)}</span>
+            <span className="font-medium">{formatMileage(effectiveMileage, vehicle.units)}</span>
           </div>
           {vehicle.license_plate && (
             <div>

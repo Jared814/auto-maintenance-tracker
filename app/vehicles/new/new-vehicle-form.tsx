@@ -62,8 +62,9 @@ export function NewVehicleForm() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="current_mileage">Current Mileage</Label>
+            <Label htmlFor="current_mileage">Current Mileage (optional)</Label>
             <Input id="current_mileage" name="current_mileage" type="number" placeholder="65000" />
+            <p className="text-xs text-muted-foreground">Will be set automatically from your first service or fill-up.</p>
           </div>
 
           <div className="space-y-1.5">
