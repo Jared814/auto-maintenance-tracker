@@ -20,7 +20,6 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV MALLOC_ARENA_MAX=2
-ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 COPY --from=builder /app/public ./public
@@ -33,6 +32,6 @@ COPY --from=deps /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 
 RUN mkdir -p /app/data
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "--max-old-space-size=384", "server.js"]
