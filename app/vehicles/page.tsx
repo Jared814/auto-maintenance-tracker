@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getVehiclesByAccountId } from '@/lib/db';
+import { getVehiclesByAccountId, getMaxLogMileageByVehicleIds } from '@/lib/db';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ export default async function VehiclesPage() {
   if (!session?.user?.id) redirect('/login');
 
   const vehicles = await getVehiclesByAccountId(session.user.id);
+  const maxLogMileage = await getMaxLogMileageByVehicleIds(vehicles.map((v) => v.id));
 
   return (
     <AppShell>
@@ -42,7 +43,10 @@ export default async function VehiclesPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((vehicle) => (
+            {vehicles.map((vehicle) => {
+              const logMax = maxLogMileage.get(vehicle.id) ?? null;
+              const effectiveMileage = Math.max(vehicle.current_mileage ?? 0, logMax ?? 0) || null;
+              return (
               <Card key={vehicle.id}>
                 <CardHeader>
                   <CardTitle>{vehicle.name}</CardTitle>
@@ -54,7 +58,7 @@ export default async function VehiclesPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    {formatMileage(vehicle.current_mileage, vehicle.units)}
+                    {formatMileage(effectiveMileage, vehicle.units)}
                   </p>
                   <div className="flex gap-2">
                     <Link href={`/vehicles/${vehicle.id}`} className="flex-1">
@@ -68,7 +72,8 @@ export default async function VehiclesPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

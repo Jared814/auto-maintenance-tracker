@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getVehiclesByAccountId, getMaintenanceLogCountsByVehicleIds, getMaintenanceTypes } from '@/lib/db';
+import { getVehiclesByAccountId, getMaintenanceLogCountsByVehicleIds, getMaintenanceTypes, getMaxLogMileageByVehicleIds } from '@/lib/db';
 import { calculateMaintenanceStatus } from '@/lib/maintenance-status';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,12 +18,16 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect('/login');
 
   const vehicles = await getVehiclesByAccountId(session.user.id);
-  const [maintenanceTypes, latestLogsByVehicle] = await Promise.all([
+  const [maintenanceTypes, latestLogsByVehicle, maxLogMileage] = await Promise.all([
     getMaintenanceTypes(session.user.id),
     getMaintenanceLogCountsByVehicleIds(vehicles.map((v) => v.id)),
+    getMaxLogMileageByVehicleIds(vehicles.map((v) => v.id)),
   ]);
 
   const vehicleStatuses = vehicles.map((vehicle) => {
+    const logMax = maxLogMileage.get(vehicle.id) ?? null;
+    const effectiveMileage = Math.max(vehicle.current_mileage ?? 0, logMax ?? 0) || null;
+
     const typeMap = latestLogsByVehicle.get(vehicle.id) ?? new Map<string, string>();
 
     let overdue = 0;
@@ -32,12 +36,12 @@ export default async function DashboardPage() {
     for (const type of maintenanceTypes) {
       const servicedAt = typeMap.get(type.id) ?? null;
       const latestLog = servicedAt ? { serviced_at: servicedAt, mileage_at_service: 0, next_due_mileage: null, next_due_date: null } as Parameters<typeof calculateMaintenanceStatus>[0] : null;
-      const { status } = calculateMaintenanceStatus(latestLog, type, vehicle.current_mileage);
+      const { status } = calculateMaintenanceStatus(latestLog, type, effectiveMileage);
       if (status === 'OVERDUE' || status === 'NEVER_SERVICED') overdue++;
       else if (status === 'DUE_SOON') dueSoon++;
     }
 
-    return { vehicle, overdue, dueSoon };
+    return { vehicle, effectiveMileage, overdue, dueSoon };
   });
 
   return (
@@ -76,7 +80,7 @@ export default async function DashboardPage() {
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicleStatuses.map(({ vehicle, overdue, dueSoon }) => (
+            {vehicleStatuses.map(({ vehicle, effectiveMileage, overdue, dueSoon }) => (
               <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`}>
                 <Card className={cn(
                   'hover:shadow-md transition-shadow cursor-pointer border-l-4',
@@ -101,7 +105,7 @@ export default async function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground">
-                      {formatMileage(vehicle.current_mileage, vehicle.units)}
+                      {formatMileage(effectiveMileage, vehicle.units)}
                     </p>
                   </CardContent>
                 </Card>

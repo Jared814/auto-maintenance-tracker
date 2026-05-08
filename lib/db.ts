@@ -1,4 +1,4 @@
-import { eq, and, desc, isNull, or, notInArray, inArray } from 'drizzle-orm';
+import { eq, and, desc, isNull, or, notInArray, inArray, max } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 import { db, runMigrations } from './db/index';
 import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, accountDisabledTypes, accountTypeOverrides } from './db/schema';
@@ -496,6 +496,33 @@ export async function getMaintenanceLogCountsByVehicleIds(
     if (!existing || row.serviced_at > existing) {
       typeMap.set(row.maintenance_type_id, row.serviced_at);
     }
+  }
+  return result;
+}
+
+export async function getMaxLogMileageByVehicleIds(
+  vehicleIds: string[]
+): Promise<Map<string, number>> {
+  if (vehicleIds.length === 0) return new Map();
+
+  const [serviceMileage, fuelMileage] = await Promise.all([
+    db
+      .select({ vehicle_id: maintenanceLogs.vehicle_id, max_mileage: max(maintenanceLogs.mileage_at_service) })
+      .from(maintenanceLogs)
+      .where(inArray(maintenanceLogs.vehicle_id, vehicleIds))
+      .groupBy(maintenanceLogs.vehicle_id),
+    db
+      .select({ vehicle_id: fuelLogs.vehicle_id, max_mileage: max(fuelLogs.mileage) })
+      .from(fuelLogs)
+      .where(inArray(fuelLogs.vehicle_id, vehicleIds))
+      .groupBy(fuelLogs.vehicle_id),
+  ]);
+
+  const result = new Map<string, number>();
+  for (const { vehicle_id, max_mileage } of [...serviceMileage, ...fuelMileage]) {
+    if (max_mileage == null) continue;
+    const existing = result.get(vehicle_id) ?? 0;
+    if (max_mileage > existing) result.set(vehicle_id, max_mileage);
   }
   return result;
 }
