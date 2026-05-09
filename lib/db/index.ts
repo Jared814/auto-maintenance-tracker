@@ -12,9 +12,10 @@ const { drizzle } = require('drizzle-orm/better-sqlite3');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { migrate } = require('drizzle-orm/better-sqlite3/migrator');
 
-const client = new Database(sqlitePath);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const db: BetterSQLite3Database<any> = drizzle(client);
+export const rawClient: any = new Database(sqlitePath);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const db: BetterSQLite3Database<any> = drizzle(rawClient);
 
 export async function runMigrations() {
   const migrationsFolder = path.join(process.cwd(), 'drizzle-sqlite');

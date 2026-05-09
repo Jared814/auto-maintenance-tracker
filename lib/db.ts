@@ -1,6 +1,6 @@
 import { eq, and, desc, isNull, or, notInArray, inArray, max } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
-import { db, runMigrations } from './db/index';
+import { db, rawClient, runMigrations } from './db/index';
 import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, accountDisabledTypes, accountTypeOverrides } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
@@ -11,6 +11,10 @@ export async function initDb() {
   console.log('[Database] Running migrations...');
   await runMigrations();
   console.log('[Database] Migrations complete.');
+
+  // Belt-and-suspenders: if the migration was already recorded but never
+  // actually executed (e.g. a crashed deploy), add the column directly.
+  try { rawClient.exec('ALTER TABLE fuel_logs ADD COLUMN total_cost TEXT'); } catch { /* already exists */ }
 
   if (process.env.NEXT_PHASE !== 'phase-production-build') {
     await seedMaintenanceTypes();
