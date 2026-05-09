@@ -139,6 +139,7 @@ export function FuelClient({
   const [odoScanError, setOdoScanError] = useState<string | null>(null);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -163,6 +164,7 @@ export function FuelClient({
       setNotesValue('');
       setSelectedOdoFiles([]);
       setSelectedFiles([]);
+      setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
       setOdoScanError(null);
       setScanError(null);
     }
@@ -182,7 +184,10 @@ export function FuelClient({
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
     if (raw.length === 0) return;
-    if (raw[0]) await handleScanReceipt(raw[0]);
+    if (raw[0]) {
+      setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(raw[0]); });
+      await handleScanReceipt(raw[0]);
+    }
     setCompressing(true);
     try {
       const compressed = await Promise.all(
@@ -212,6 +217,9 @@ export function FuelClient({
     const updated = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(updated);
     syncInput(updated);
+    if (updated.length === 0) {
+      setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    }
   }
 
   async function handleScanOdometer(file: File) {
@@ -456,6 +464,15 @@ export function FuelClient({
                           </div>
                         ))}
                       </div>
+                    )}
+                    {receiptPreviewUrl && (
+                      <a href={receiptPreviewUrl} target="_blank" rel="noopener noreferrer" className="block">
+                        <img
+                          src={receiptPreviewUrl}
+                          alt="Receipt preview"
+                          className="w-full max-h-64 object-contain rounded-md border border-border cursor-zoom-in"
+                        />
+                      </a>
                     )}
                     {scanning && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
