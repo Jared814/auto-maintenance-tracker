@@ -25,7 +25,6 @@ ENV HOSTNAME="0.0.0.0"
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle-sqlite ./drizzle-sqlite
 # Explicitly copy better-sqlite3 native addon compiled for glibc (node:20-slim).
 COPY --from=deps /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
