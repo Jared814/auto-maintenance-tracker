@@ -10,17 +10,18 @@ const ReceiptSchema = z.object({
   price_per_unit: z.string().nullable(),
   total_cost: z.string().nullable(),
   filled_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null),
+  store: z.string().nullable(),
 });
 
 const OdometerSchema = z.object({
   mileage: z.number().nullable(),
 });
 
-const NULL_RECEIPT = { fuel_quantity: null, fuel_unit: null, price_per_unit: null, total_cost: null, filled_at: null };
+const NULL_RECEIPT = { fuel_quantity: null, fuel_unit: null, price_per_unit: null, total_cost: null, filled_at: null, store: null };
 const NULL_ODOMETER = { mileage: null };
 
 const RECEIPT_PROMPT = `Look at this fuel or gas station receipt or fuel pump display. Extract these fields and reply with ONLY a JSON object, no other text:
-{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string like "3.499" or null>, "total_cost": <string like "43.21" or null>, "filled_at": <string like "2026-05-08" or null>}
+{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string like "3.499" or null>, "total_cost": <string like "43.21" or null>, "filled_at": <string like "2026-05-08" or null>, "store": <string like "Shell - 123 Main St, Springfield" or null>}
 
 Rules:
 - fuel_quantity: volume purchased as a number (e.g. 12.345)
@@ -28,6 +29,7 @@ Rules:
 - price_per_unit: price per gallon/liter as a string without currency symbol
 - total_cost: total fuel charge as a string without currency symbol
 - filled_at: the transaction date in YYYY-MM-DD format (e.g. "2026-05-08"); use null if not clearly visible
+- store: the gas station brand and address combined (e.g. "Shell - 123 Main St, Springfield"); use null if not visible
 - Use null for any field not visible`;
 
 const ODOMETER_PROMPT = `Look at this vehicle odometer or instrument cluster. Read the mileage and reply with ONLY a JSON object, no other text:

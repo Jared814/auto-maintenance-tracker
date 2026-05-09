@@ -132,6 +132,7 @@ export function FuelClient({
   const [fuelQuantityValue, setFuelQuantityValue] = useState('');
   const [pricePerUnitValue, setPricePerUnitValue] = useState('');
   const [totalCostValue, setTotalCostValue] = useState('');
+  const [notesValue, setNotesValue] = useState('');
 
   const [selectedOdoFiles, setSelectedOdoFiles] = useState<File[]>([]);
   const [scanningOdo, setScanningOdo] = useState(false);
@@ -159,6 +160,7 @@ export function FuelClient({
       setFuelQuantityValue('');
       setPricePerUnitValue('');
       setTotalCostValue('');
+      setNotesValue('');
       setSelectedOdoFiles([]);
       setSelectedFiles([]);
       setOdoScanError(null);
@@ -267,6 +269,7 @@ export function FuelClient({
       if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
       if (data.total_cost) setTotalCostValue(data.total_cost);
       if (data.filled_at) setFilledAtValue(data.filled_at);
+      if (data.store && !notesValue) setNotesValue(data.store);
     } catch {
       setScanError('Could not scan receipt. Enter values manually.');
     } finally {
@@ -397,6 +400,8 @@ export function FuelClient({
                   name="notes"
                   rows={2}
                   placeholder="Trip, purpose, location…"
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
