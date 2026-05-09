@@ -5,32 +5,53 @@ import { auth } from '@/auth';
 const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
 const ReceiptSchema = z.object({
-  fuel_quantity: z.number().nullable(),
-  fuel_unit: z.enum(['gallons', 'liters']).nullable(),
-  price_per_unit: z.string().nullable(),
-  total_cost: z.string().nullable(),
+  // Accept number or numeric string; coerce to number
+  fuel_quantity: z.union([z.number(), z.string()])
+    .nullable().catch(null)
+    .transform(val => {
+      if (val === null) return null;
+      const n = typeof val === 'number' ? val : parseFloat(val as string);
+      return isNaN(n) ? null : n;
+    }),
+  // Accept any casing/abbreviation and normalise to 'gallons' | 'liters'
+  fuel_unit: z.string().nullable().catch(null).transform(val => {
+    if (!val) return null;
+    const lower = val.toLowerCase();
+    if (lower.includes('gal')) return 'gallons' as const;
+    if (lower.includes('lit') || lower === 'l') return 'liters' as const;
+    return null;
+  }),
+  price_per_unit: z.string().nullable().catch(null),
+  total_cost: z.string().nullable().catch(null),
   filled_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().catch(null),
-  store: z.string().nullable(),
+  store: z.string().nullable().catch(null),
 });
 
 const OdometerSchema = z.object({
-  mileage: z.number().nullable(),
+  mileage: z.union([z.number(), z.string()])
+    .nullable().catch(null)
+    .transform(val => {
+      if (val === null) return null;
+      const n = typeof val === 'number' ? Math.round(val) : parseInt(val as string, 10);
+      return isNaN(n) ? null : n;
+    }),
 });
 
 const NULL_RECEIPT = { fuel_quantity: null, fuel_unit: null, price_per_unit: null, total_cost: null, filled_at: null, store: null };
 const NULL_ODOMETER = { mileage: null };
 
-const RECEIPT_PROMPT = `Look at this fuel or gas station receipt or fuel pump display. Extract these fields and reply with ONLY a JSON object, no other text:
-{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string like "3.499" or null>, "total_cost": <string like "43.21" or null>, "filled_at": <string like "2026-05-08" or null>, "store": <string like "Shell - 123 Main St, Springfield" or null>}
+const RECEIPT_PROMPT = `Look at this gas station receipt or fuel pump display. Read the text carefully and return ONLY a JSON object — no explanation, no markdown.
 
-Rules:
-- fuel_quantity: volume purchased as a number (e.g. 12.345)
-- fuel_unit: "gallons" if receipt shows GAL/GALLONS, "liters" if L/LITRES
-- price_per_unit: price per gallon/liter as a string without currency symbol
-- total_cost: total fuel charge as a string without currency symbol
-- filled_at: the transaction date in YYYY-MM-DD format (e.g. "2026-05-08"); use null if not clearly visible
-- store: the gas station brand and address combined (e.g. "Shell - 123 Main St, Springfield"); use null if not visible
-- Use null for any field not visible`;
+{"fuel_quantity": <number or null>, "fuel_unit": <"gallons" or "liters" or null>, "price_per_unit": <string or null>, "total_cost": <string or null>, "filled_at": <string or null>, "store": <string or null>}
+
+What to look for on the receipt:
+- fuel_quantity: a number near the word GAL, GALLONS, or LITERS — e.g. "12.345 GAL" → 12.345
+- fuel_unit: "gallons" if you see GAL or GALLONS; "liters" if you see L, LITER, or LITRE
+- price_per_unit: price per gallon or liter — often labeled PPG, PRICE/GAL, or $/GAL — digits only, no $ (e.g. "3.499")
+- total_cost: the fuel sale total — often labeled TOTAL, FUEL TOTAL, or SALE — digits only, no $ (e.g. "43.21")
+- filled_at: the transaction date in YYYY-MM-DD format (e.g. "2026-05-08"); null if not visible
+- store: gas station brand and address if printed on receipt (e.g. "Shell - 123 Main St, Springfield"); null if not visible
+- Use null for any value you cannot clearly read`;
 
 const ODOMETER_PROMPT = `Look at this vehicle odometer or instrument cluster. Read the mileage and reply with ONLY a JSON object, no other text:
 {"mileage": <integer or null>}
