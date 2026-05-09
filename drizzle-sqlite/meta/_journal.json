@@ -15,6 +15,13 @@
       "when": 1778268810623,
       "tag": "0001_unknown_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1746734400000,
+      "tag": "0002_total_cost",
+      "breakpoints": true
     }
   ]
 }
