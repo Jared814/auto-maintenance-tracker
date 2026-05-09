@@ -218,7 +218,8 @@ export function FuelClient({
     if (raw.length === 0) return;
     if (raw[0]) {
       setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(raw[0]); });
-      await handleScanReceipt(raw[0]);
+      const compatible = await toMoondreamCompatible(raw[0]);
+      await handleScanReceipt(compatible);
     }
     setCompressing(true);
     try {
