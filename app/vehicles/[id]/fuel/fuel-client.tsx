@@ -196,11 +196,8 @@ export function FuelClient({
           return new File([result], file.name, { type: result.type });
         })
       );
-      setSelectedFiles((prev) => {
-        const merged = [...prev, ...compressed];
-        syncInput(merged);
-        return merged;
-      });
+      setSelectedFiles([...compressed]);
+      syncInput([...compressed]);
     } finally {
       setCompressing(false);
     }
@@ -430,7 +427,12 @@ export function FuelClient({
                       <div className="space-y-1">
                         {selectedOdoFiles.map((f, i) => (
                           <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
-                            <span className="truncate text-muted-foreground">{f.name}</span>
+                            <button type="button"
+                              onClick={() => { if (odoFileInputRef.current) { odoFileInputRef.current.value = ''; odoFileInputRef.current.click(); } }}
+                              className="flex items-center gap-1.5 min-w-0 text-muted-foreground hover:text-foreground">
+                              <ImagePlus className="size-3 shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                            </button>
                             <button type="button" onClick={() => removeOdoFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
                           </div>
                         ))}
@@ -459,7 +461,12 @@ export function FuelClient({
                       <div className="space-y-1">
                         {selectedFiles.map((f, i) => (
                           <div key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-muted text-xs">
-                            <span className="truncate text-muted-foreground">{f.name}</span>
+                            <button type="button"
+                              onClick={() => { if (fileInputRef.current) { fileInputRef.current.value = ''; fileInputRef.current.click(); } }}
+                              className="flex items-center gap-1.5 min-w-0 text-muted-foreground hover:text-foreground">
+                              <ImagePlus className="size-3 shrink-0" />
+                              <span className="truncate">{f.name}</span>
+                            </button>
                             <button type="button" onClick={() => removeFile(i)} className="shrink-0 text-muted-foreground hover:text-destructive"><X className="size-3" /></button>
                           </div>
                         ))}
