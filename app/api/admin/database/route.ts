@@ -14,10 +14,6 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  if (process.env.DATABASE_URL) {
-    return NextResponse.json({ error: 'Only available in SQLite mode' }, { status: 400 });
-  }
-
   const dbPath = getSqlitePath();
   if (!fs.existsSync(dbPath)) {
     return NextResponse.json({ error: 'Database file not found' }, { status: 404 });
@@ -40,10 +36,6 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  if (process.env.DATABASE_URL) {
-    return NextResponse.json({ error: 'Only available in SQLite mode' }, { status: 400 });
-  }
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;

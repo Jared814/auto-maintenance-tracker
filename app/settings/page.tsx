@@ -52,7 +52,7 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
-        <DatabaseBackupCard available={!process.env.DATABASE_URL} />
+        <DatabaseBackupCard />
       </div>
     </AppShell>
   );

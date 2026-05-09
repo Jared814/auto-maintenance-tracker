@@ -1,10 +1,10 @@
 import type { Config } from 'drizzle-kit';
 
 export default {
-  schema: './lib/db/schema.pg.ts',
-  out: './drizzle',
-  dialect: 'postgresql',
+  schema: './lib/db/schema.sqlite.ts',
+  out: './drizzle-sqlite',
+  dialect: 'sqlite',
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/automotivemaint',
+    url: process.env.SQLITE_DB_PATH ?? './data/maintenance.db',
   },
 } satisfies Config;

@@ -1,1 +1,0 @@
-ALTER TABLE "fuel_logs" ADD COLUMN "total_cost" text;
