@@ -21,6 +21,7 @@ export async function addFuelLogAction(vehicleId: string, prevState: ActionState
     fuel_quantity: formData.get('fuel_quantity') ? parseFloat(formData.get('fuel_quantity') as string) : undefined,
     fuel_unit: formData.get('fuel_unit') || 'gallons',
     price_per_unit: formData.get('price_per_unit') || null,
+    total_cost: formData.get('total_cost') || null,
     notes: formData.get('notes') || null,
   };
 

@@ -23,6 +23,7 @@ type FuelLog = {
   fuel_quantity: number;
   fuel_unit: string;
   price_per_unit: string | null;
+  total_cost: string | null;
   notes: string | null;
 };
 
@@ -130,6 +131,7 @@ export function FuelClient({
   const [mileageValue, setMileageValue] = useState('');
   const [fuelQuantityValue, setFuelQuantityValue] = useState('');
   const [pricePerUnitValue, setPricePerUnitValue] = useState('');
+  const [totalCostValue, setTotalCostValue] = useState('');
 
   const [selectedOdoFiles, setSelectedOdoFiles] = useState<File[]>([]);
   const [compressingOdo, setCompressingOdo] = useState(false);
@@ -157,6 +159,7 @@ export function FuelClient({
       setMileageValue('');
       setFuelQuantityValue('');
       setPricePerUnitValue('');
+      setTotalCostValue('');
       setSelectedOdoFiles([]);
       setSelectedFiles([]);
       setOdoScanError(null);
@@ -287,6 +290,7 @@ export function FuelClient({
       if (data.fuel_quantity != null) setFuelQuantityValue(String(data.fuel_quantity));
       if (data.fuel_unit) setUnit(data.fuel_unit as 'gallons' | 'liters');
       if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
+      if (data.total_cost) setTotalCostValue(data.total_cost);
       if (data.filled_at) setFilledAtValue(data.filled_at);
     } catch {
       setScanError('Could not scan receipt. Enter values manually.');
@@ -397,6 +401,16 @@ export function FuelClient({
                   <span className="text-muted-foreground font-normal">(optional)</span>
                 </Label>
                 <Input id="price_per_unit" name="price_per_unit" type="text" placeholder="3.49" value={pricePerUnitValue} onChange={(e) => setPricePerUnitValue(e.target.value)} />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="total_cost">
+                  Total Cost <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                  <Input id="total_cost" name="total_cost" type="text" placeholder="43.21" value={totalCostValue} onChange={(e) => setTotalCostValue(e.target.value)} className="pl-6" />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -521,9 +535,11 @@ export function FuelClient({
               {sortedLogs.map((log) => {
                 const econ = economyByDate.get(log.filled_at);
                 const totalCost =
-                  log.price_per_unit
-                    ? (parseFloat(log.price_per_unit) * log.fuel_quantity).toFixed(2)
-                    : null;
+                  log.total_cost
+                    ? parseFloat(log.total_cost).toFixed(2)
+                    : log.price_per_unit
+                      ? (parseFloat(log.price_per_unit) * log.fuel_quantity).toFixed(2)
+                      : null;
 
                 return (
                   <div key={log.id} className="bg-card border border-border rounded-lg px-3 py-2.5 space-y-2">

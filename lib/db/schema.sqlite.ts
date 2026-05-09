@@ -66,6 +66,7 @@ export const fuelLogs = sqliteTable('fuel_logs', {
   fuel_quantity: real('fuel_quantity').notNull(),
   fuel_unit: text('fuel_unit').notNull().default('gallons'),
   price_per_unit: text('price_per_unit'),
+  total_cost: text('total_cost'),
   notes: text('notes'),
   created_at: text('created_at').notNull(),
 }, (table) => [

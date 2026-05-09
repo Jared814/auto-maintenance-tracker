@@ -73,6 +73,7 @@ export const CreateFuelLogSchema = z.object({
   fuel_quantity: z.number().positive('Fuel quantity must be positive'),
   fuel_unit: z.enum(['gallons', 'liters']).default('gallons'),
   price_per_unit: z.string().optional().nullable(),
+  total_cost: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 

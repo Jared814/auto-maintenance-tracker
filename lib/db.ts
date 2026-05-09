@@ -429,6 +429,7 @@ export async function createFuelLog(data: {
   fuel_quantity: number;
   fuel_unit: string;
   price_per_unit?: string | null;
+  total_cost?: string | null;
   notes?: string | null;
 }) {
   const [log] = await db.insert(fuelLogs).values({
