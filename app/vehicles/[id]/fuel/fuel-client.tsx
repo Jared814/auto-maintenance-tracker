@@ -213,6 +213,22 @@ export function FuelClient({
     setSelectedOdoFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function resetForm() {
+    formRef.current?.reset();
+    setUnit('gallons');
+    setFilledAtValue(getToday());
+    setMileageValue('');
+    setFuelQuantityValue('');
+    setPricePerUnitValue('');
+    setTotalCostValue('');
+    setNotesValue('');
+    setSelectedOdoFiles([]);
+    setSelectedFiles([]);
+    setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    setOdoScanError(null);
+    setScanError(null);
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
     if (raw.length === 0) return;
@@ -532,7 +548,10 @@ export function FuelClient({
                 </div>
               )}
 
-              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || scanning || scanningOdo) ? 'opacity-50 pointer-events-none' : ''} />
+              <div className="flex gap-2">
+                <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || scanning || scanningOdo) ? 'opacity-50 pointer-events-none' : ''} />
+                <Button type="button" variant="outline" onClick={resetForm}>Reset</Button>
+              </div>
             </form>
           </CardContent>
         </Card>
