@@ -134,7 +134,6 @@ export function FuelClient({
   const [totalCostValue, setTotalCostValue] = useState('');
 
   const [selectedOdoFiles, setSelectedOdoFiles] = useState<File[]>([]);
-  const [compressingOdo, setCompressingOdo] = useState(false);
   const [scanningOdo, setScanningOdo] = useState(false);
   const [odoScanError, setOdoScanError] = useState<string | null>(null);
 
@@ -170,41 +169,18 @@ export function FuelClient({
   async function handleOdoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
     if (raw.length === 0) return;
-    setCompressingOdo(true);
-    try {
-      const compressed = await Promise.all(
-        raw.map(async (file) => {
-          const result = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true });
-          return new File([result], file.name, { type: result.type });
-        })
-      );
-      setSelectedOdoFiles((prev) => {
-        const merged = [...prev, ...compressed];
-        syncOdoInput(merged);
-        return merged;
-      });
-      if (compressed[0]) handleScanOdometer(compressed[0]);
-    } finally {
-      setCompressingOdo(false);
-    }
-  }
-
-  function syncOdoInput(files: File[]) {
-    if (!odoFileInputRef.current) return;
-    const dt = new DataTransfer();
-    files.forEach((f) => dt.items.add(f));
-    odoFileInputRef.current.files = dt.files;
+    setSelectedOdoFiles(raw);
+    if (raw[0]) handleScanOdometer(raw[0]);
   }
 
   function removeOdoFile(index: number) {
-    const updated = selectedOdoFiles.filter((_, i) => i !== index);
-    setSelectedOdoFiles(updated);
-    syncOdoInput(updated);
+    setSelectedOdoFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
     if (raw.length === 0) return;
+    if (raw[0]) await handleScanReceipt(raw[0]);
     setCompressing(true);
     try {
       const compressed = await Promise.all(
@@ -218,7 +194,6 @@ export function FuelClient({
         syncInput(merged);
         return merged;
       });
-      if (compressed[0]) handleScanReceipt(compressed[0]);
     } finally {
       setCompressing(false);
     }
@@ -431,12 +406,12 @@ export function FuelClient({
                   {/* Odometer photo */}
                   <div className="space-y-1.5">
                     <Label>Odometer Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <input ref={odoFileInputRef} type="file" name="photos" accept="image/*" className="hidden" onChange={handleOdoFileChange} />
+                    <input ref={odoFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleOdoFileChange} />
                     {selectedOdoFiles.length === 0 ? (
-                      <button type="button" onClick={() => odoFileInputRef.current?.click()} disabled={compressingOdo}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
-                        {compressingOdo ? <Loader2 className="size-3.5 animate-spin" /> : <ImagePlus className="size-3.5" />}
-                        {compressingOdo ? 'Compressing…' : 'Attach odometer'}
+                      <button type="button" onClick={() => odoFileInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors">
+                        <ImagePlus className="size-3.5" />
+                        Attach odometer
                       </button>
                     ) : (
                       <div className="space-y-1">
@@ -488,7 +463,7 @@ export function FuelClient({
                 </div>
               )}
 
-              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || compressingOdo || scanning || scanningOdo) ? 'opacity-50 pointer-events-none' : ''} />
+              <SubmitButton label="Save Fill-Up" pendingLabel="Saving…" className={(compressing || scanning || scanningOdo) ? 'opacity-50 pointer-events-none' : ''} />
             </form>
           </CardContent>
         </Card>
