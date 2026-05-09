@@ -50,7 +50,7 @@ What to look for on the receipt:
 - price_per_unit: price per gallon or liter — often labeled PPG, PRICE/GAL, or $/GAL — digits only, no $ (e.g. "3.499")
 - total_cost: the fuel sale total — often labeled TOTAL, FUEL TOTAL, or SALE — digits only, no $ (e.g. "43.21")
 - filled_at: the transaction date in YYYY-MM-DD format (e.g. "2026-05-08"); null if not visible
-- store: gas station brand and address if printed on receipt (e.g. "Shell - 123 Main St, Springfield"); null if not visible
+- store: full gas station name and complete address as printed — include street, city, state, and zip if visible (e.g. "Shell - 123 Main St, Springfield, IL 62701"); null if not visible
 - Use null for any value you cannot clearly read`;
 
 const ODOMETER_PROMPT = `Look at this vehicle odometer or instrument cluster. Read the mileage and reply with ONLY a JSON object, no other text:
