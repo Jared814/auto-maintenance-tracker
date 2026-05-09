@@ -251,6 +251,13 @@ export function FuelClient({
   async function handleScanReceipt(file: File) {
     setScanError(null);
     setScanning(true);
+    // Clear previous scan values so any change from the new scan is immediately visible
+    setFuelQuantityValue('');
+    setUnit('gallons');
+    setPricePerUnitValue('');
+    setTotalCostValue('');
+    setFilledAtValue(getToday());
+    setNotesValue('');
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -274,7 +281,7 @@ export function FuelClient({
       if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
       if (data.total_cost) setTotalCostValue(data.total_cost);
       if (data.filled_at) setFilledAtValue(data.filled_at);
-      if (data.store && !notesValue) setNotesValue(data.store);
+      if (data.store) setNotesValue(data.store);
     } catch {
       setScanError('Could not scan receipt. Enter values manually.');
     } finally {
