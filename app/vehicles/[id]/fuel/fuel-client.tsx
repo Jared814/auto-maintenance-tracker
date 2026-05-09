@@ -16,6 +16,35 @@ import { getToday } from '@/lib/dates';
 import { formatDate } from '@/lib/utils';
 import type { ActionState } from '@/lib/actions/state';
 
+const MOONDREAM_SUPPORTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+// Convert unsupported formats (e.g. AVIF) to JPEG via canvas before sending to Moondream.
+// Supported types pass through as-is with no quality loss.
+async function toMoondreamCompatible(file: File): Promise<File> {
+  if (MOONDREAM_SUPPORTED_TYPES.includes(file.type)) return file;
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d')!.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { reject(new Error('Canvas conversion failed')); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.92,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
+  });
+}
+
 type FuelLog = {
   id: string;
   filled_at: string;
@@ -174,7 +203,10 @@ export function FuelClient({
     const raw = Array.from(e.target.files ?? []);
     if (raw.length === 0) return;
     setSelectedOdoFiles(raw);
-    if (raw[0]) handleScanOdometer(raw[0]);
+    if (raw[0]) {
+      const compatible = await toMoondreamCompatible(raw[0]);
+      handleScanOdometer(compatible);
+    }
   }
 
   function removeOdoFile(index: number) {
