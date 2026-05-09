@@ -4,6 +4,7 @@ export {
   maintenanceTypes,
   maintenanceLogs,
   fuelLogs,
+  mileageLogs,
   accountTypeOverrides,
   accountDisabledTypes,
   receipts,

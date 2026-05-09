@@ -77,6 +77,13 @@ export const CreateFuelLogSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+export const CreateMileageLogSchema = z.object({
+  vehicle_id: z.string().min(1),
+  logged_at: z.string().min(1, 'Date is required'),
+  mileage: z.number().int().min(0, 'Mileage is required'),
+  notes: z.string().optional().nullable(),
+});
+
 export const CreateReceiptSchema = z.object({
   maintenance_log_id: z.string().min(1),
   r2_key: z.string().min(1),
@@ -92,4 +99,5 @@ export type CreateMaintenanceLog = z.infer<typeof CreateMaintenanceLogSchema>;
 export type UpdateMaintenanceLog = z.infer<typeof UpdateMaintenanceLogSchema>;
 export type CreateMaintenanceType = z.infer<typeof CreateMaintenanceTypeSchema>;
 export type CreateFuelLog = z.infer<typeof CreateFuelLogSchema>;
+export type CreateMileageLog = z.infer<typeof CreateMileageLogSchema>;
 export type CreateReceipt = z.infer<typeof CreateReceiptSchema>;

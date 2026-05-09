@@ -1,7 +1,7 @@
 import { eq, and, desc, isNull, or, notInArray, inArray, max } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 import { db, rawClient, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, accountDisabledTypes, accountTypeOverrides } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, mileageLogs, accountDisabledTypes, accountTypeOverrides } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -510,7 +510,7 @@ export async function getMaxLogMileageByVehicleIds(
 ): Promise<Map<string, number>> {
   if (vehicleIds.length === 0) return new Map();
 
-  const [serviceMileage, fuelMileage] = await Promise.all([
+  const [serviceMileage, fuelMileage, odMileage] = await Promise.all([
     db
       .select({ vehicle_id: maintenanceLogs.vehicle_id, max_mileage: max(maintenanceLogs.mileage_at_service) })
       .from(maintenanceLogs)
@@ -521,15 +521,55 @@ export async function getMaxLogMileageByVehicleIds(
       .from(fuelLogs)
       .where(inArray(fuelLogs.vehicle_id, vehicleIds))
       .groupBy(fuelLogs.vehicle_id),
+    db
+      .select({ vehicle_id: mileageLogs.vehicle_id, max_mileage: max(mileageLogs.mileage) })
+      .from(mileageLogs)
+      .where(inArray(mileageLogs.vehicle_id, vehicleIds))
+      .groupBy(mileageLogs.vehicle_id),
   ]);
 
   const result = new Map<string, number>();
-  for (const { vehicle_id, max_mileage } of [...serviceMileage, ...fuelMileage]) {
+  for (const { vehicle_id, max_mileage } of [...serviceMileage, ...fuelMileage, ...odMileage]) {
     if (max_mileage == null) continue;
     const existing = result.get(vehicle_id) ?? 0;
     if (max_mileage > existing) result.set(vehicle_id, max_mileage);
   }
   return result;
+}
+
+// ---- MILEAGE LOGS ----
+
+export async function createMileageLog(data: {
+  vehicle_id: string;
+  logged_at: string;
+  mileage: number;
+  notes?: string | null;
+}) {
+  const [log] = await db.insert(mileageLogs).values({
+    id: nanoid(),
+    ...data,
+    created_at: getNow(),
+  }).returning();
+  return log;
+}
+
+export async function getMileageLogsByVehicleId(vehicleId: string) {
+  return db.select()
+    .from(mileageLogs)
+    .where(eq(mileageLogs.vehicle_id, vehicleId))
+    .orderBy(desc(mileageLogs.logged_at));
+}
+
+export async function getMileageLogById(id: string) {
+  const [log] = await db.select()
+    .from(mileageLogs)
+    .where(eq(mileageLogs.id, id))
+    .limit(1);
+  return log ?? null;
+}
+
+export async function deleteMileageLog(id: string) {
+  await db.delete(mileageLogs).where(eq(mileageLogs.id, id));
 }
 
 // ---- FUEL RECEIPTS ----

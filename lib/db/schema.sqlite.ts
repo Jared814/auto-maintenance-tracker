@@ -101,6 +101,17 @@ export const receipts = sqliteTable('receipts', {
   index('idx_receipts_log_id').on(table.maintenance_log_id),
 ]);
 
+export const mileageLogs = sqliteTable('mileage_logs', {
+  id: text('id').primaryKey(),
+  vehicle_id: text('vehicle_id').references(() => vehicles.id).notNull(),
+  logged_at: text('logged_at').notNull(),
+  mileage: integer('mileage').notNull(),
+  notes: text('notes'),
+  created_at: text('created_at').notNull(),
+}, (table) => [
+  index('idx_mileage_logs_vehicle_date').on(table.vehicle_id, table.logged_at),
+]);
+
 export const fuelReceipts = sqliteTable('fuel_receipts', {
   id: text('id').primaryKey(),
   fuel_log_id: text('fuel_log_id').references(() => fuelLogs.id).notNull(),

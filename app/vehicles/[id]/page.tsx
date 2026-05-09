@@ -6,13 +6,14 @@ import {
   getMaintenanceTypes,
   getMaintenanceLogsByVehicleId,
   getFuelLogsByVehicleId,
+  getMileageLogsByVehicleId,
 } from '@/lib/db';
 import { computeEconomy, avgEconomy } from '@/lib/fuel-economy';
 import { calculateMaintenanceStatus, statusBadgeClass, statusLabel } from '@/lib/maintenance-status';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, Pencil, QrCode, Plus, Fuel } from 'lucide-react';
+import { ChevronLeft, Pencil, QrCode, Plus, Fuel, Gauge } from 'lucide-react';
 import { formatMileage, formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -43,10 +44,11 @@ export default async function VehicleDetailPage({
   const vehicle = await getVehicleById(id, session.user.id);
   if (!vehicle) notFound();
 
-  const [allTypes, logs, fuelLogs] = await Promise.all([
+  const [allTypes, logs, fuelLogs, mileageLogs] = await Promise.all([
     getMaintenanceTypes(session.user.id),
     getMaintenanceLogsByVehicleId(id),
     getFuelLogsByVehicleId(id),
+    getMileageLogsByVehicleId(id),
   ]);
 
   const economyPoints = computeEconomy(fuelLogs, vehicle.units);
@@ -58,6 +60,7 @@ export default async function VehicleDetailPage({
     vehicle.current_mileage ?? 0,
     ...logs.map((l) => l.mileage_at_service),
     ...fuelLogs.map((f) => f.mileage),
+    ...mileageLogs.map((m) => m.mileage),
   ) || null;
 
   // Build status for each type
@@ -157,12 +160,20 @@ export default async function VehicleDetailPage({
         <div>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Fuel Economy</h2>
-            <Link href={`/vehicles/${id}/fuel`}>
-              <Button size="sm">
-                <Fuel className="size-4" />
-                Log Fill
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href={`/vehicles/${id}/mileage`}>
+                <Button size="sm" variant="outline">
+                  <Gauge className="size-4" />
+                  Log Mileage
+                </Button>
+              </Link>
+              <Link href={`/vehicles/${id}/fuel`}>
+                <Button size="sm">
+                  <Fuel className="size-4" />
+                  Log Fill
+                </Button>
+              </Link>
+            </div>
           </div>
           {lastMpg !== null ? (
             <Card>
