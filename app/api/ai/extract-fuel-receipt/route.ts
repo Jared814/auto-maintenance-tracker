@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
 const ReceiptSchema = z.object({
-  // Accept number or numeric string; coerce to number
   fuel_quantity: z.union([z.number(), z.string()])
     .nullable().catch(null)
     .transform(val => {
@@ -13,7 +13,6 @@ const ReceiptSchema = z.object({
       const n = typeof val === 'number' ? val : parseFloat(val as string);
       return isNaN(n) ? null : n;
     }),
-  // Accept any casing/abbreviation and normalise to 'gallons' | 'liters'
   fuel_unit: z.string().nullable().catch(null).transform(val => {
     if (!val) return null;
     const lower = val.toLowerCase();
@@ -60,6 +59,29 @@ Rules:
 - mileage: the odometer reading as a whole number (e.g. 65432)
 - Use null if the mileage is not clearly visible`;
 
+async function callGeminiReceipt(apiKey: string, imageBase64: string, mediaType: string): Promise<string | null> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+
+    const base64Data = imageBase64.startsWith('data:')
+      ? imageBase64.split(',')[1]
+      : imageBase64;
+
+    const result = await model.generateContent([
+      RECEIPT_PROMPT,
+      { inlineData: { data: base64Data, mimeType: mediaType } },
+    ]);
+
+    return result.response.text();
+  } catch {
+    return null;
+  }
+}
+
 async function callMoondream(apiKey: string, imageUrl: string, prompt: string): Promise<string | null> {
   try {
     const res = await fetch('https://api.moondream.ai/v1/query', {
@@ -81,40 +103,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiKey = process.env.MOONDREAM_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'Receipt scanning not configured' }, { status: 503 });
-  }
-
   const { imageBase64, mediaType, scanType = 'receipt' } = await request.json();
   const safeMediaType = VALID_MEDIA_TYPES.includes(mediaType) ? mediaType : 'image/jpeg';
 
-  let imageUrl: string = imageBase64;
-  if (!imageBase64.startsWith('data:')) {
-    imageUrl = `data:${safeMediaType};base64,${imageBase64}`;
-  }
-
   if (scanType === 'odometer') {
-    const answer = await callMoondream(apiKey, imageUrl, ODOMETER_PROMPT);
+    const moondreamKey = process.env.MOONDREAM_API_KEY;
+    if (!moondreamKey) {
+      return NextResponse.json({ error: 'Odometer scanning not configured' }, { status: 503 });
+    }
+    let imageUrl: string = imageBase64;
+    if (!imageBase64.startsWith('data:')) {
+      imageUrl = `data:${safeMediaType};base64,${imageBase64}`;
+    }
+    const answer = await callMoondream(moondreamKey, imageUrl, ODOMETER_PROMPT);
     if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
     const match = answer.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json(NULL_ODOMETER);
     try {
-      const validated = OdometerSchema.parse(JSON.parse(match[0]));
-      return NextResponse.json(validated);
+      return NextResponse.json(OdometerSchema.parse(JSON.parse(match[0])));
     } catch {
       return NextResponse.json(NULL_ODOMETER);
     }
   }
 
-  // receipt / fuel pump
-  const answer = await callMoondream(apiKey, imageUrl, RECEIPT_PROMPT);
+  // receipt — Gemini 2.0 Flash
+  const geminiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!geminiKey) {
+    return NextResponse.json({ error: 'Receipt scanning not configured' }, { status: 503 });
+  }
+  const answer = await callGeminiReceipt(geminiKey, imageBase64, safeMediaType);
   if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
   const match = answer.match(/\{[\s\S]*\}/);
   if (!match) return NextResponse.json(NULL_RECEIPT);
   try {
-    const validated = ReceiptSchema.parse(JSON.parse(match[0]));
-    return NextResponse.json(validated);
+    return NextResponse.json(ReceiptSchema.parse(JSON.parse(match[0])));
   } catch {
     return NextResponse.json(NULL_RECEIPT);
   }
