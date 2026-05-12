@@ -59,7 +59,7 @@ Rules:
 - mileage: the odometer reading as a whole number (e.g. 65432)
 - Use null if the mileage is not clearly visible`;
 
-async function callGeminiReceipt(apiKey: string, imageBase64: string, mediaType: string): Promise<string | null> {
+async function callGemini(apiKey: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
@@ -72,28 +72,13 @@ async function callGeminiReceipt(apiKey: string, imageBase64: string, mediaType:
       : imageBase64;
 
     const result = await model.generateContent([
-      RECEIPT_PROMPT,
+      prompt,
       { inlineData: { data: base64Data, mimeType: mediaType } },
     ]);
 
     return result.response.text();
   } catch (err) {
-    console.error('[callGeminiReceipt]', err);
-    return null;
-  }
-}
-
-async function callMoondream(apiKey: string, imageUrl: string, prompt: string): Promise<string | null> {
-  try {
-    const res = await fetch('https://api.moondream.ai/v1/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Moondream-Auth': apiKey },
-      body: JSON.stringify({ image_url: imageUrl, question: prompt }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.answer ?? null;
-  } catch {
+    console.error('[callGemini]', err);
     return null;
   }
 }
@@ -104,19 +89,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const geminiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!geminiKey) {
+    return NextResponse.json({ error: 'Image scanning not configured' }, { status: 503 });
+  }
+
   const { imageBase64, mediaType, scanType = 'receipt' } = await request.json();
   const safeMediaType = VALID_MEDIA_TYPES.includes(mediaType) ? mediaType : 'image/jpeg';
 
   if (scanType === 'odometer') {
-    const moondreamKey = process.env.MOONDREAM_API_KEY;
-    if (!moondreamKey) {
-      return NextResponse.json({ error: 'Odometer scanning not configured' }, { status: 503 });
-    }
-    let imageUrl: string = imageBase64;
-    if (!imageBase64.startsWith('data:')) {
-      imageUrl = `data:${safeMediaType};base64,${imageBase64}`;
-    }
-    const answer = await callMoondream(moondreamKey, imageUrl, ODOMETER_PROMPT);
+    const answer = await callGemini(geminiKey, imageBase64, safeMediaType, ODOMETER_PROMPT);
     if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
     const match = answer.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json(NULL_ODOMETER);
@@ -127,12 +109,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // receipt — Gemini 2.0 Flash
-  const geminiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!geminiKey) {
-    return NextResponse.json({ error: 'Receipt scanning not configured' }, { status: 503 });
-  }
-  const answer = await callGeminiReceipt(geminiKey, imageBase64, safeMediaType);
+  const answer = await callGemini(geminiKey, imageBase64, safeMediaType, RECEIPT_PROMPT);
   if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
   const match = answer.match(/\{[\s\S]*\}/);
   if (!match) return NextResponse.json(NULL_RECEIPT);
