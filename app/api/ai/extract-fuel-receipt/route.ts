@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
@@ -61,22 +60,33 @@ Rules:
 
 async function callGemini(apiKey: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: { responseMimeType: 'application/json' },
-    });
-
     const base64Data = imageBase64.startsWith('data:')
       ? imageBase64.split(',')[1]
       : imageBase64;
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: base64Data, mimeType: mediaType } },
-    ]);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mediaType, data: base64Data } },
+          ]}],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+      }
+    );
 
-    return result.response.text();
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[callGemini] HTTP error:', res.status, err);
+      return null;
+    }
+
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
   } catch (err) {
     console.error('[callGemini]', err);
     return null;
