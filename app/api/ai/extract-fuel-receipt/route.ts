@@ -74,7 +74,6 @@ async function callGemini(apiKey: string, imageBase64: string, mediaType: string
             { text: prompt },
             { inline_data: { mime_type: mediaType, data: base64Data } },
           ]}],
-          generationConfig: { responseMimeType: 'application/json' },
         }),
       }
     );
