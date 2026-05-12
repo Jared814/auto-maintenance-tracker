@@ -210,7 +210,7 @@ export function TimelineClient({
   const AXIS_Y = 160;
   const LABEL_Y = 178;
   const PIN_TIP_Y = 236;
-  const TOTAL_H = 266;
+  const TOTAL_H = 316;
 
   const totalWidth = Math.max(600, events.length * 64);
   const innerWidth = totalWidth - PAD_L - PAD_R;
@@ -464,6 +464,18 @@ export function TimelineClient({
                           style={{ userSelect: 'none', pointerEvents: 'none' }}
                         >
                           {letter}
+                        </text>
+                        <text
+                          x={x.toFixed(1)}
+                          y={(PIN_TIP_Y + 16).toFixed(1)}
+                          textAnchor="start"
+                          fontSize={8}
+                          fill={color}
+                          opacity={0.85}
+                          transform={`rotate(90, ${x.toFixed(1)}, ${(PIN_TIP_Y + 16).toFixed(1)})`}
+                          style={{ userSelect: 'none', pointerEvents: 'none' }}
+                        >
+                          {formatMileage(ev.mileage, vehicle.units)}
                         </text>
                       </g>
                     );
