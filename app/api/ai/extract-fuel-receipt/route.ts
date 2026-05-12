@@ -77,7 +77,8 @@ async function callGeminiReceipt(apiKey: string, imageBase64: string, mediaType:
     ]);
 
     return result.response.text();
-  } catch {
+  } catch (err) {
+    console.error('[callGeminiReceipt]', err);
     return null;
   }
 }
