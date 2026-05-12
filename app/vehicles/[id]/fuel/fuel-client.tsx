@@ -327,7 +327,12 @@ export function FuelClient({
       const data = await res.json();
       if (data.fuel_quantity != null) setFuelQuantityValue(String(data.fuel_quantity));
       if (data.fuel_unit) setUnit(data.fuel_unit as 'gallons' | 'liters');
-      if (data.price_per_unit) setPricePerUnitValue(data.price_per_unit);
+      if (data.price_per_unit) {
+        setPricePerUnitValue(data.price_per_unit);
+      } else if (data.total_cost && data.fuel_quantity) {
+        const computed = (parseFloat(data.total_cost) / data.fuel_quantity).toFixed(3);
+        if (!isNaN(Number(computed))) setPricePerUnitValue(computed);
+      }
       if (data.total_cost) setTotalCostValue(data.total_cost);
       if (data.filled_at) setFilledAtValue(data.filled_at);
       if (data.store) setNotesValue(data.store);
