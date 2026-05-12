@@ -13,7 +13,7 @@ import { calculateMaintenanceStatus, statusBadgeClass, statusLabel } from '@/lib
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, Pencil, QrCode, Plus, Fuel, Gauge } from 'lucide-react';
+import { ChevronLeft, Pencil, QrCode, Plus, Fuel, Gauge, Clock } from 'lucide-react';
 import { formatMileage, formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -129,6 +129,11 @@ export default async function VehicleDetailPage({
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href={`/vehicles/${id}/timeline`} title="View timeline">
+              <Button variant="outline" size="icon-sm">
+                <Clock className="size-4" />
+              </Button>
+            </Link>
             <Link href={`/vehicles/${id}/qr`}>
               <Button variant="outline" size="icon-sm">
                 <QrCode className="size-4" />
