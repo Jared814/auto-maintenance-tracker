@@ -1,7 +1,7 @@
 import { eq, and, desc, isNull, or, notInArray, inArray, max } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 import { db, rawClient, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, mileageLogs, accountDisabledTypes, accountTypeOverrides, accountSettings } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, mileageLogs, accountDisabledTypes, accountTypeOverrides, accountSettings, scanEngines } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -622,4 +622,55 @@ export async function upsertAccountScanSettings(accountId: string, data: { odome
   await db.insert(accountSettings)
     .values({ account_id: accountId, ...data })
     .onConflictDoUpdate({ target: accountSettings.account_id, set: data });
+}
+
+export async function upsertAccountApiKeys(accountId: string, data: { moondream_api_key?: string; gemini_api_key?: string; openrouter_api_key?: string }) {
+  await db.insert(accountSettings)
+    .values({ account_id: accountId, odometer_model: 'moondream', receipt_model: 'gemini-2.5-flash', ...data })
+    .onConflictDoUpdate({ target: accountSettings.account_id, set: data });
+}
+
+// ---- SCAN ENGINES ----
+
+export type ScanEngineRow = typeof scanEngines.$inferSelect;
+
+export async function getScanEngines(accountId: string): Promise<ScanEngineRow[]> {
+  return db.select().from(scanEngines).where(eq(scanEngines.account_id, accountId));
+}
+
+export async function getScanEngineById(id: string, accountId: string): Promise<ScanEngineRow | null> {
+  const [row] = await db.select().from(scanEngines)
+    .where(and(eq(scanEngines.id, id), eq(scanEngines.account_id, accountId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function createScanEngine(accountId: string, data: {
+  name: string; provider: string; model_id?: string | null; api_key?: string | null; base_url?: string | null;
+}): Promise<ScanEngineRow> {
+  const [row] = await db.insert(scanEngines).values({
+    id: nanoid(),
+    account_id: accountId,
+    name: data.name,
+    provider: data.provider,
+    model_id: data.model_id ?? null,
+    api_key: data.api_key ?? null,
+    base_url: data.base_url ?? null,
+    created_at: getNow(),
+  }).returning();
+  return row;
+}
+
+export async function updateScanEngine(id: string, accountId: string, data: {
+  name: string; provider: string; model_id?: string | null; api_key?: string | null; base_url?: string | null;
+}): Promise<ScanEngineRow | null> {
+  const [row] = await db.update(scanEngines)
+    .set({ name: data.name, provider: data.provider, model_id: data.model_id ?? null, api_key: data.api_key ?? null, base_url: data.base_url ?? null })
+    .where(and(eq(scanEngines.id, id), eq(scanEngines.account_id, accountId)))
+    .returning();
+  return row ?? null;
+}
+
+export async function deleteScanEngine(id: string, accountId: string) {
+  await db.delete(scanEngines).where(and(eq(scanEngines.id, id), eq(scanEngines.account_id, accountId)));
 }

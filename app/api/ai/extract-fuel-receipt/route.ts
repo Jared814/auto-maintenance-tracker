@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { getAccountScanSettings } from '@/lib/db';
-import { DEFAULT_ODOMETER_MODEL, DEFAULT_RECEIPT_MODEL } from '@/lib/scan-models';
+import { getAccountScanSettings, getScanEngineById } from '@/lib/db';
+import { BUILTIN_MODEL_IDS, DEFAULT_ODOMETER_MODEL, DEFAULT_RECEIPT_MODEL } from '@/lib/scan-models';
 
 const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
@@ -62,10 +62,7 @@ Rules:
 
 async function callGemini(apiKey: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
   try {
-    const base64Data = imageBase64.startsWith('data:')
-      ? imageBase64.split(',')[1]
-      : imageBase64;
-
+    const base64Data = imageBase64.startsWith('data:') ? imageBase64.split(',')[1] : imageBase64;
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
@@ -79,19 +76,10 @@ async function callGemini(apiKey: string, imageBase64: string, mediaType: string
         }),
       }
     );
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[callGemini] HTTP error:', res.status, err);
-      return null;
-    }
-
+    if (!res.ok) { console.error('[callGemini] HTTP error:', res.status, await res.text()); return null; }
     const data = await res.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
-  } catch (err) {
-    console.error('[callGemini]', err);
-    return null;
-  }
+  } catch (err) { console.error('[callGemini]', err); return null; }
 }
 
 async function callMoondream(apiKey: string, imageUrl: string, prompt: string): Promise<string | null> {
@@ -104,71 +92,86 @@ async function callMoondream(apiKey: string, imageUrl: string, prompt: string): 
     if (!res.ok) return null;
     const data = await res.json();
     return data.answer ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-async function callOpenRouter(apiKey: string, model: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+async function callOpenAICompatible(apiKey: string, baseUrl: string, model: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
   try {
-    const imageUrl = imageBase64.startsWith('data:')
-      ? imageBase64
-      : `data:${mediaType};base64,${imageBase64}`;
-
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${mediaType};base64,${imageBase64}`;
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: imageUrl } },
-          ],
-        }],
+        messages: [{ role: 'user', content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageUrl } },
+        ]}],
       }),
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('[callOpenRouter] HTTP error:', res.status, err);
-      return null;
-    }
-
+    if (!res.ok) { console.error('[callOpenAICompatible] HTTP error:', res.status, await res.text()); return null; }
     const data = await res.json();
     return data.choices?.[0]?.message?.content ?? null;
-  } catch (err) {
-    console.error('[callOpenRouter]', err);
-    return null;
-  }
+  } catch (err) { console.error('[callOpenAICompatible]', err); return null; }
 }
 
-async function runScan(modelId: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+type AccountKeys = {
+  moondream_api_key?: string | null;
+  gemini_api_key?: string | null;
+  openrouter_api_key?: string | null;
+};
+
+async function runBuiltinScan(modelId: string, keys: AccountKeys, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+  const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${mediaType};base64,${imageBase64}`;
+
   if (modelId === 'moondream') {
-    const key = process.env.MOONDREAM_API_KEY;
-    if (!key) { console.error('[scan] MOONDREAM_API_KEY not set'); return null; }
-    const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${mediaType};base64,${imageBase64}`;
+    const key = keys.moondream_api_key || process.env.MOONDREAM_API_KEY;
+    if (!key) { console.error('[scan] No Moondream API key'); return null; }
     return callMoondream(key, imageUrl, prompt);
   }
 
   if (modelId === 'gemini-2.5-flash') {
-    const key = process.env.GOOGLE_AI_API_KEY;
-    if (!key) { console.error('[scan] GOOGLE_AI_API_KEY not set'); return null; }
+    const key = keys.gemini_api_key || process.env.GOOGLE_AI_API_KEY;
+    if (!key) { console.error('[scan] No Gemini API key'); return null; }
     return callGemini(key, imageBase64, mediaType, prompt);
   }
 
-  if (modelId.startsWith('openrouter/')) {
-    const key = process.env.OPENROUTER_API_KEY;
-    if (!key) { console.error('[scan] OPENROUTER_API_KEY not set'); return null; }
-    const orModel = modelId.slice('openrouter/'.length);
-    return callOpenRouter(key, orModel, imageBase64, mediaType, prompt);
+  return null;
+}
+
+async function runEngineScan(accountId: string, engineId: string, keys: AccountKeys, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+  const engine = await getScanEngineById(engineId, accountId);
+  if (!engine) { console.error('[scan] Engine not found:', engineId); return null; }
+
+  const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${mediaType};base64,${imageBase64}`;
+
+  if (engine.provider === 'moondream') {
+    const key = engine.api_key || keys.moondream_api_key || process.env.MOONDREAM_API_KEY;
+    if (!key) { console.error('[scan] No Moondream API key for engine', engine.name); return null; }
+    return callMoondream(key, imageUrl, prompt);
   }
 
-  console.error('[scan] Unknown model:', modelId);
+  if (engine.provider === 'gemini') {
+    const key = engine.api_key || keys.gemini_api_key || process.env.GOOGLE_AI_API_KEY;
+    if (!key) { console.error('[scan] No Gemini API key for engine', engine.name); return null; }
+    return callGemini(key, imageBase64, mediaType, prompt);
+  }
+
+  if (engine.provider === 'openrouter') {
+    const key = engine.api_key || keys.openrouter_api_key || process.env.OPENROUTER_API_KEY;
+    if (!key) { console.error('[scan] No OpenRouter API key for engine', engine.name); return null; }
+    if (!engine.model_id) { console.error('[scan] No model_id for engine', engine.name); return null; }
+    return callOpenAICompatible(key, 'https://openrouter.ai/api/v1', engine.model_id, imageBase64, mediaType, prompt);
+  }
+
+  if (engine.provider === 'custom') {
+    const key = engine.api_key || '';
+    if (!engine.base_url) { console.error('[scan] No base_url for custom engine', engine.name); return null; }
+    if (!engine.model_id) { console.error('[scan] No model_id for custom engine', engine.name); return null; }
+    return callOpenAICompatible(key, engine.base_url, engine.model_id, imageBase64, mediaType, prompt);
+  }
+
+  console.error('[scan] Unknown provider:', engine.provider);
   return null;
 }
 
@@ -184,26 +187,30 @@ export async function POST(request: Request) {
   const settings = await getAccountScanSettings(session.user.id);
   const odometerModel = settings.odometer_model ?? DEFAULT_ODOMETER_MODEL;
   const receiptModel = settings.receipt_model ?? DEFAULT_RECEIPT_MODEL;
+  const accountKeys: AccountKeys = {
+    moondream_api_key: 'moondream_api_key' in settings ? (settings as AccountKeys).moondream_api_key : null,
+    gemini_api_key: 'gemini_api_key' in settings ? (settings as AccountKeys).gemini_api_key : null,
+    openrouter_api_key: 'openrouter_api_key' in settings ? (settings as AccountKeys).openrouter_api_key : null,
+  };
+
+  const prompt = scanType === 'odometer' ? ODOMETER_PROMPT : RECEIPT_PROMPT;
+  const modelId = scanType === 'odometer' ? odometerModel : receiptModel;
+
+  const answer = BUILTIN_MODEL_IDS.has(modelId)
+    ? await runBuiltinScan(modelId, accountKeys, imageBase64, safeMediaType, prompt)
+    : await runEngineScan(session.user.id, modelId, accountKeys, imageBase64, safeMediaType, prompt);
+
+  if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
 
   if (scanType === 'odometer') {
-    const answer = await runScan(odometerModel, imageBase64, safeMediaType, ODOMETER_PROMPT);
-    if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
     const match = answer.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json(NULL_ODOMETER);
-    try {
-      return NextResponse.json(OdometerSchema.parse(JSON.parse(match[0])));
-    } catch {
-      return NextResponse.json(NULL_ODOMETER);
-    }
+    try { return NextResponse.json(OdometerSchema.parse(JSON.parse(match[0]))); }
+    catch { return NextResponse.json(NULL_ODOMETER); }
   }
 
-  const answer = await runScan(receiptModel, imageBase64, safeMediaType, RECEIPT_PROMPT);
-  if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
   const match = answer.match(/\{[\s\S]*\}/);
   if (!match) return NextResponse.json(NULL_RECEIPT);
-  try {
-    return NextResponse.json(ReceiptSchema.parse(JSON.parse(match[0])));
-  } catch {
-    return NextResponse.json(NULL_RECEIPT);
-  }
+  try { return NextResponse.json(ReceiptSchema.parse(JSON.parse(match[0]))); }
+  catch { return NextResponse.json(NULL_RECEIPT); }
 }

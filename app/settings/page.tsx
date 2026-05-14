@@ -1,15 +1,15 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getAccountById, getAccountScanSettings } from '@/lib/db';
+import { getAccountById, getAccountScanSettings, getScanEngines } from '@/lib/db';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Wrench, ChevronRight } from 'lucide-react';
+import { Wrench, ChevronRight } from 'lucide-react';
 import { DatabaseBackupCard } from './database-backup-card';
+import { ApiKeysCard } from './api-keys-card';
+import { ScanEnginesCard } from './scan-engines-card';
 import { ScanSettingsCard } from './scan-settings-card';
-import { SCAN_MODELS } from '@/lib/scan-models';
-import type { ScanModelId } from '@/lib/scan-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +17,21 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const [account, scanSettings] = await Promise.all([
+  const [account, scanSettings, engines] = await Promise.all([
     getAccountById(session.user.id),
     getAccountScanSettings(session.user.id),
+    getScanEngines(session.user.id),
   ]);
 
-  const configuredKeys = new Set(
-    SCAN_MODELS.filter((m) => !!process.env[m.envKey]).map((m) => m.envKey)
-  );
+  // Determine key presence: DB key takes priority, env var is fallback
+  const s = scanSettings as typeof scanSettings & {
+    moondream_api_key?: string | null;
+    gemini_api_key?: string | null;
+    openrouter_api_key?: string | null;
+  };
+  const hasMoondreamKey = !!(s.moondream_api_key || process.env.MOONDREAM_API_KEY);
+  const hasGeminiKey = !!(s.gemini_api_key || process.env.GOOGLE_AI_API_KEY);
+  const hasOpenRouterKey = !!(s.openrouter_api_key || process.env.OPENROUTER_API_KEY);
 
   return (
     <AppShell>
@@ -47,10 +54,18 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
+        <ApiKeysCard
+          hasMoondreamKey={hasMoondreamKey}
+          hasGeminiKey={hasGeminiKey}
+          hasOpenRouterKey={hasOpenRouterKey}
+        />
+
+        <ScanEnginesCard initialEngines={engines} />
+
         <ScanSettingsCard
-          odometerModel={scanSettings.odometer_model as ScanModelId}
-          receiptModel={scanSettings.receipt_model as ScanModelId}
-          configuredKeys={configuredKeys}
+          odometerModel={scanSettings.odometer_model}
+          receiptModel={scanSettings.receipt_model}
+          engines={engines}
         />
 
         <Card>

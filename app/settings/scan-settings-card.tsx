@@ -5,17 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SubmitButton } from '@/components/submit-button';
 import { ScanLine } from 'lucide-react';
 import { saveScanSettingsAction } from '@/lib/actions/settings';
-import { SCAN_MODELS } from '@/lib/scan-models';
-import type { ScanModelId } from '@/lib/scan-models';
+import { BUILTIN_MODELS } from '@/lib/scan-models';
+import type { ScanEngineRow } from '@/lib/db';
+
+const PROVIDER_LABELS: Record<string, string> = {
+  openrouter: 'OpenRouter',
+  gemini: 'Gemini',
+  moondream: 'Moondream',
+  custom: 'Custom',
+};
 
 export function ScanSettingsCard({
   odometerModel,
   receiptModel,
-  configuredKeys,
+  engines,
 }: {
-  odometerModel: ScanModelId;
-  receiptModel: ScanModelId;
-  configuredKeys: Set<string>;
+  odometerModel: string;
+  receiptModel: string;
+  engines: ScanEngineRow[];
 }) {
   const [state, action] = useActionState(saveScanSettingsAction, null);
 
@@ -24,23 +31,13 @@ export function ScanSettingsCard({
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <ScanLine className="size-4" />
-          AI Scan Models
+          Model Assignment
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form action={action} className="space-y-4">
-          <ModelSelect
-            label="Odometer photos"
-            name="odometer_model"
-            defaultValue={odometerModel}
-            configuredKeys={configuredKeys}
-          />
-          <ModelSelect
-            label="Fuel receipts"
-            name="receipt_model"
-            defaultValue={receiptModel}
-            configuredKeys={configuredKeys}
-          />
+          <ModelSelect label="Odometer photos" name="odometer_model" value={odometerModel} engines={engines} />
+          <ModelSelect label="Fuel receipts" name="receipt_model" value={receiptModel} engines={engines} />
 
           {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
@@ -56,16 +53,11 @@ export function ScanSettingsCard({
   );
 }
 
-function ModelSelect({
-  label,
-  name,
-  defaultValue,
-  configuredKeys,
-}: {
+function ModelSelect({ label, name, value, engines }: {
   label: string;
   name: string;
-  defaultValue: string;
-  configuredKeys: Set<string>;
+  value: string;
+  engines: ScanEngineRow[];
 }) {
   return (
     <div className="space-y-1.5">
@@ -73,21 +65,24 @@ function ModelSelect({
       <select
         id={name}
         name={name}
-        defaultValue={defaultValue}
+        defaultValue={value}
         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        {SCAN_MODELS.map((m) => {
-          const configured = configuredKeys.has(m.envKey);
-          return (
-            <option key={m.id} value={m.id}>
-              {m.label}{!configured ? ' (API key not set)' : ''}
-            </option>
-          );
-        })}
+        <optgroup label="Built-in">
+          {BUILTIN_MODELS.map((m) => (
+            <option key={m.id} value={m.id}>{m.label}</option>
+          ))}
+        </optgroup>
+        {engines.length > 0 && (
+          <optgroup label="Custom Engines">
+            {engines.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name} ({PROVIDER_LABELS[e.provider] ?? e.provider})
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
-      <p className="text-xs text-muted-foreground">
-        {SCAN_MODELS.find((m) => m.id === defaultValue)?.description}
-      </p>
     </div>
   );
 }

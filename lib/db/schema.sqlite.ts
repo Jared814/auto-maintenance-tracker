@@ -128,4 +128,20 @@ export const accountSettings = sqliteTable('account_settings', {
   account_id: text('account_id').primaryKey().references(() => accounts.id),
   odometer_model: text('odometer_model').notNull().default('moondream'),
   receipt_model: text('receipt_model').notNull().default('gemini-2.5-flash'),
+  moondream_api_key: text('moondream_api_key'),
+  gemini_api_key: text('gemini_api_key'),
+  openrouter_api_key: text('openrouter_api_key'),
 });
+
+export const scanEngines = sqliteTable('scan_engines', {
+  id: text('id').primaryKey(),
+  account_id: text('account_id').references(() => accounts.id).notNull(),
+  name: text('name').notNull(),
+  provider: text('provider').notNull(), // 'openrouter' | 'gemini' | 'moondream' | 'custom'
+  model_id: text('model_id'),
+  api_key: text('api_key'),
+  base_url: text('base_url'),
+  created_at: text('created_at').notNull(),
+}, (table) => [
+  index('idx_scan_engines_account_id').on(table.account_id),
+]);
