@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +18,12 @@ export function ApiKeysCard({
   hasGeminiKey: boolean;
   hasOpenRouterKey: boolean;
 }) {
+  const router = useRouter();
   const [state, action] = useActionState(saveApiKeysAction, null);
+
+  useEffect(() => {
+    if (state && 'success' in state) router.refresh();
+  }, [state, router]);
 
   return (
     <Card>

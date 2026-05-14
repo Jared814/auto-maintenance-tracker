@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SubmitButton } from '@/components/submit-button';
 import { ScanLine } from 'lucide-react';
@@ -26,7 +27,12 @@ export function ScanSettingsCard({
   compressBeforeScan: boolean;
   engines: ScanEngineRow[];
 }) {
+  const router = useRouter();
   const [state, action] = useActionState(saveScanSettingsAction, null);
+
+  useEffect(() => {
+    if (state && 'success' in state) router.refresh();
+  }, [state, router]);
 
   return (
     <Card>
@@ -43,6 +49,7 @@ export function ScanSettingsCard({
 
           <label className="flex items-center gap-2.5 cursor-pointer">
             <input
+              key={String(compressBeforeScan)}
               type="checkbox"
               name="compress_before_scan"
               defaultChecked={compressBeforeScan}
@@ -78,6 +85,7 @@ function ModelSelect({ label, name, value, engines }: {
     <div className="space-y-1.5">
       <label htmlFor={name} className="text-sm font-medium">{label}</label>
       <select
+        key={value}
         id={name}
         name={name}
         defaultValue={value}
