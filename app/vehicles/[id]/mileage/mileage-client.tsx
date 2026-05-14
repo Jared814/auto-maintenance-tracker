@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,9 +92,11 @@ export function MileageClient({
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedOdoFile(file);
     const compatible = await toMoondreamCompatible(file);
-    await handleScanOdometer(compatible);
+    const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
+    const compressed = new File([result], compatible.name, { type: result.type });
+    setSelectedOdoFile(compressed);
+    await handleScanOdometer(compressed);
   }
 
   async function handleScanOdometer(file: File) {
