@@ -148,12 +148,14 @@ export function FuelClient({
   receiptsByLogId,
   r2Configured,
   effectiveMileage,
+  compressBeforeScan,
 }: {
   vehicle: Vehicle;
   initialLogs: FuelLog[];
   receiptsByLogId: Record<string, FuelReceipt[]>;
   r2Configured: boolean;
   effectiveMileage?: number | null;
+  compressBeforeScan?: boolean;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
   const [filledAtValue, setFilledAtValue] = useState(getToday());
@@ -204,10 +206,15 @@ export function FuelClient({
     if (raw.length === 0) return;
     if (raw[0]) {
       const compatible = await toMoondreamCompatible(raw[0]);
-      const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
-      const compressed = new File([result], compatible.name, { type: result.type });
-      setSelectedOdoFiles([compressed]);
-      handleScanOdometer(compressed);
+      if (compressBeforeScan) {
+        const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
+        const compressed = new File([result], compatible.name, { type: result.type });
+        setSelectedOdoFiles([compressed]);
+        handleScanOdometer(compressed);
+      } else {
+        setSelectedOdoFiles([compatible]);
+        handleScanOdometer(compatible);
+      }
     }
   }
 
@@ -238,17 +245,17 @@ export function FuelClient({
     if (raw[0]) setReceiptPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(raw[0]); });
     setCompressing(true);
     try {
-      const compressed = await Promise.all(
+      const files = await Promise.all(
         raw.map(async (file) => {
           const compatible = await toMoondreamCompatible(file);
+          if (!compressBeforeScan) return compatible;
           const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
           return new File([result], compatible.name, { type: result.type });
         })
       );
-      setSelectedFiles(compressed);
-      syncInput(compressed);
-      // Scan the already-compressed file — no second encode needed
-      if (compressed[0]) await handleScanReceipt(compressed[0]);
+      setSelectedFiles(files);
+      syncInput(files);
+      if (files[0]) await handleScanReceipt(files[0]);
     } finally {
       setCompressing(false);
     }

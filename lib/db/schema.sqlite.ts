@@ -131,6 +131,7 @@ export const accountSettings = sqliteTable('account_settings', {
   moondream_api_key: text('moondream_api_key'),
   gemini_api_key: text('gemini_api_key'),
   openrouter_api_key: text('openrouter_api_key'),
+  compress_before_scan: integer('compress_before_scan', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const scanEngines = sqliteTable('scan_engines', {

@@ -18,10 +18,12 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function ScanSettingsCard({
   odometerModel,
   receiptModel,
+  compressBeforeScan,
   engines,
 }: {
   odometerModel: string;
   receiptModel: string;
+  compressBeforeScan: boolean;
   engines: ScanEngineRow[];
 }) {
   const [state, action] = useActionState(saveScanSettingsAction, null);
@@ -38,6 +40,19 @@ export function ScanSettingsCard({
         <form action={action} className="space-y-4">
           <ModelSelect label="Odometer photos" name="odometer_model" value={odometerModel} engines={engines} />
           <ModelSelect label="Fuel receipts" name="receipt_model" value={receiptModel} engines={engines} />
+
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              name="compress_before_scan"
+              defaultChecked={compressBeforeScan}
+              className="size-4 rounded border-input accent-primary"
+            />
+            <span className="text-sm">
+              Compress photos before scanning
+              <span className="text-xs text-muted-foreground ml-1">(reduces upload size; may reduce accuracy)</span>
+            </span>
+          </label>
 
           {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>

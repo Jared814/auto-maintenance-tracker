@@ -1,0 +1,1 @@
+ALTER TABLE `account_settings` ADD `compress_before_scan` integer DEFAULT false NOT NULL;

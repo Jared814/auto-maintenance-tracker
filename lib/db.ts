@@ -615,10 +615,10 @@ export async function getAccountScanSettings(accountId: string) {
     .from(accountSettings)
     .where(eq(accountSettings.account_id, accountId))
     .limit(1);
-  return row ?? { odometer_model: 'moondream', receipt_model: 'gemini-2.5-flash' };
+  return row ?? { odometer_model: 'moondream', receipt_model: 'gemini-2.5-flash', compress_before_scan: false };
 }
 
-export async function upsertAccountScanSettings(accountId: string, data: { odometer_model: string; receipt_model: string }) {
+export async function upsertAccountScanSettings(accountId: string, data: { odometer_model: string; receipt_model: string; compress_before_scan?: boolean }) {
   await db.insert(accountSettings)
     .values({ account_id: accountId, ...data })
     .onConflictDoUpdate({ target: accountSettings.account_id, set: data });

@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getVehicleById, getFuelLogsByVehicleId, getFuelReceiptsByVehicleId, getMaxLogMileageByVehicleIds } from '@/lib/db';
+import { getVehicleById, getFuelLogsByVehicleId, getFuelReceiptsByVehicleId, getMaxLogMileageByVehicleIds, getAccountScanSettings } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import { FuelClient } from './fuel-client';
 
@@ -10,11 +10,12 @@ export default async function FuelPage({ params }: { params: Promise<{ id: strin
   if (!session?.user?.id) redirect('/login');
 
   const { id } = await params;
-  const [vehicle, fuelLogs, allReceipts, maxLogMileage] = await Promise.all([
+  const [vehicle, fuelLogs, allReceipts, maxLogMileage, scanSettings] = await Promise.all([
     getVehicleById(id, session.user.id),
     getFuelLogsByVehicleId(id),
     getFuelReceiptsByVehicleId(id),
     getMaxLogMileageByVehicleIds([id]),
+    getAccountScanSettings(session.user.id),
   ]);
 
   if (!vehicle) notFound();
@@ -34,5 +35,7 @@ export default async function FuelPage({ params }: { params: Promise<{ id: strin
 
   const r2Configured = !!(process.env.CLOUDFLARE_R2_ACCOUNT_ID && process.env.CLOUDFLARE_R2_BUCKET_NAME);
 
-  return <FuelClient vehicle={vehicle} initialLogs={fuelLogs} receiptsByLogId={receiptsByLogId} r2Configured={r2Configured} effectiveMileage={effectiveMileage} />;
+  const compressBeforeScan = 'compress_before_scan' in scanSettings ? !!(scanSettings as { compress_before_scan?: boolean }).compress_before_scan : false;
+
+  return <FuelClient vehicle={vehicle} initialLogs={fuelLogs} receiptsByLogId={receiptsByLogId} r2Configured={r2Configured} effectiveMileage={effectiveMileage} compressBeforeScan={compressBeforeScan} />;
 }
