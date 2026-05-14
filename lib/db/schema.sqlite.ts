@@ -132,6 +132,8 @@ export const accountSettings = sqliteTable('account_settings', {
   gemini_api_key: text('gemini_api_key'),
   openrouter_api_key: text('openrouter_api_key'),
   compress_before_scan: integer('compress_before_scan', { mode: 'boolean' }).notNull().default(false),
+  compress_odometer_before_scan: integer('compress_odometer_before_scan', { mode: 'boolean' }).notNull().default(false),
+  compress_receipt_before_scan: integer('compress_receipt_before_scan', { mode: 'boolean' }).notNull().default(false),
 });
 
 export const scanEngines = sqliteTable('scan_engines', {

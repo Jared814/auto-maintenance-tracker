@@ -20,7 +20,7 @@ export default async function MileagePage({ params }: { params: Promise<{ id: st
   if (!vehicle) notFound();
 
   const effectiveMileage = Math.max(vehicle.current_mileage ?? 0, maxLogMileage.get(id) ?? 0) || null;
-  const compressBeforeScan = 'compress_before_scan' in scanSettings ? !!(scanSettings as { compress_before_scan?: boolean }).compress_before_scan : false;
+  const compressOdometerBeforeScan = !!(scanSettings as { compress_odometer_before_scan?: boolean }).compress_odometer_before_scan;
 
-  return <MileageClient vehicle={vehicle} initialLogs={logs} effectiveMileage={effectiveMileage} compressBeforeScan={compressBeforeScan} />;
+  return <MileageClient vehicle={vehicle} initialLogs={logs} effectiveMileage={effectiveMileage} compressOdometerBeforeScan={compressOdometerBeforeScan} />;
 }

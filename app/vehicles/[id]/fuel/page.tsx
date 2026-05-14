@@ -35,7 +35,7 @@ export default async function FuelPage({ params }: { params: Promise<{ id: strin
 
   const r2Configured = !!(process.env.CLOUDFLARE_R2_ACCOUNT_ID && process.env.CLOUDFLARE_R2_BUCKET_NAME);
 
-  const compressBeforeScan = 'compress_before_scan' in scanSettings ? !!(scanSettings as { compress_before_scan?: boolean }).compress_before_scan : false;
+  const s = scanSettings as { compress_odometer_before_scan?: boolean; compress_receipt_before_scan?: boolean };
 
-  return <FuelClient vehicle={vehicle} initialLogs={fuelLogs} receiptsByLogId={receiptsByLogId} r2Configured={r2Configured} effectiveMileage={effectiveMileage} compressBeforeScan={compressBeforeScan} />;
+  return <FuelClient vehicle={vehicle} initialLogs={fuelLogs} receiptsByLogId={receiptsByLogId} r2Configured={r2Configured} effectiveMileage={effectiveMileage} compressOdometerBeforeScan={!!s.compress_odometer_before_scan} compressReceiptBeforeScan={!!s.compress_receipt_before_scan} />;
 }

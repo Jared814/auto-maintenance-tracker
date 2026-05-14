@@ -19,12 +19,14 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function ScanSettingsCard({
   odometerModel,
   receiptModel,
-  compressBeforeScan,
+  compressOdometerBeforeScan,
+  compressReceiptBeforeScan,
   engines,
 }: {
   odometerModel: string;
   receiptModel: string;
-  compressBeforeScan: boolean;
+  compressOdometerBeforeScan: boolean;
+  compressReceiptBeforeScan: boolean;
   engines: ScanEngineRow[];
 }) {
   const router = useRouter();
@@ -44,22 +46,22 @@ export function ScanSettingsCard({
       </CardHeader>
       <CardContent>
         <form action={action} className="space-y-4">
-          <ModelSelect label="Odometer photos" name="odometer_model" value={odometerModel} engines={engines} />
-          <ModelSelect label="Fuel receipts" name="receipt_model" value={receiptModel} engines={engines} />
-
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <input
-              key={String(compressBeforeScan)}
-              type="checkbox"
-              name="compress_before_scan"
-              defaultChecked={compressBeforeScan}
-              className="size-4 rounded border-input accent-primary"
-            />
-            <span className="text-sm">
-              Compress photos before scanning
-              <span className="text-xs text-muted-foreground ml-1">(reduces upload size; may reduce accuracy)</span>
-            </span>
-          </label>
+          <ModelSelect
+            label="Odometer photos"
+            name="odometer_model"
+            value={odometerModel}
+            engines={engines}
+            compressName="compress_odometer_before_scan"
+            compress={compressOdometerBeforeScan}
+          />
+          <ModelSelect
+            label="Fuel receipts"
+            name="receipt_model"
+            value={receiptModel}
+            engines={engines}
+            compressName="compress_receipt_before_scan"
+            compress={compressReceiptBeforeScan}
+          />
 
           {state && 'error' in state && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{state.error}</p>
@@ -75,11 +77,13 @@ export function ScanSettingsCard({
   );
 }
 
-function ModelSelect({ label, name, value, engines }: {
+function ModelSelect({ label, name, value, engines, compressName, compress }: {
   label: string;
   name: string;
   value: string;
   engines: ScanEngineRow[];
+  compressName: string;
+  compress: boolean;
 }) {
   return (
     <div className="space-y-1.5">
@@ -106,6 +110,16 @@ function ModelSelect({ label, name, value, engines }: {
           </optgroup>
         )}
       </select>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          key={String(compress)}
+          type="checkbox"
+          name={compressName}
+          defaultChecked={compress}
+          className="size-3.5 rounded border-input accent-primary"
+        />
+        <span className="text-xs text-muted-foreground">Compress before scanning</span>
+      </label>
     </div>
   );
 }

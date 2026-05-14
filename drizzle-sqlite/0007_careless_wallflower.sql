@@ -1,0 +1,2 @@
+ALTER TABLE `account_settings` ADD `compress_odometer_before_scan` integer DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `account_settings` ADD `compress_receipt_before_scan` integer DEFAULT false NOT NULL;

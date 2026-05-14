@@ -148,14 +148,16 @@ export function FuelClient({
   receiptsByLogId,
   r2Configured,
   effectiveMileage,
-  compressBeforeScan,
+  compressOdometerBeforeScan,
+  compressReceiptBeforeScan,
 }: {
   vehicle: Vehicle;
   initialLogs: FuelLog[];
   receiptsByLogId: Record<string, FuelReceipt[]>;
   r2Configured: boolean;
   effectiveMileage?: number | null;
-  compressBeforeScan?: boolean;
+  compressOdometerBeforeScan?: boolean;
+  compressReceiptBeforeScan?: boolean;
 }) {
   const [unit, setUnit] = useState<'gallons' | 'liters'>('gallons');
   const [filledAtValue, setFilledAtValue] = useState(getToday());
@@ -206,7 +208,7 @@ export function FuelClient({
     if (raw.length === 0) return;
     if (raw[0]) {
       const compatible = await toMoondreamCompatible(raw[0]);
-      if (compressBeforeScan) {
+      if (compressOdometerBeforeScan) {
         const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
         const compressed = new File([result], compatible.name, { type: result.type });
         setSelectedOdoFiles([compressed]);
@@ -248,7 +250,7 @@ export function FuelClient({
       const files = await Promise.all(
         raw.map(async (file) => {
           const compatible = await toMoondreamCompatible(file);
-          if (!compressBeforeScan) return compatible;
+          if (!compressReceiptBeforeScan) return compatible;
           const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
           return new File([result], compatible.name, { type: result.type });
         })

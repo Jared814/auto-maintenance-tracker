@@ -59,12 +59,12 @@ export function MileageClient({
   vehicle,
   initialLogs,
   effectiveMileage,
-  compressBeforeScan,
+  compressOdometerBeforeScan,
 }: {
   vehicle: Vehicle;
   initialLogs: MileageLog[];
   effectiveMileage?: number | null;
-  compressBeforeScan?: boolean;
+  compressOdometerBeforeScan?: boolean;
 }) {
   const [loggedAtValue, setLoggedAtValue] = useState(getToday());
   const [mileageValue, setMileageValue] = useState('');
@@ -95,7 +95,7 @@ export function MileageClient({
     const file = e.target.files?.[0];
     if (!file) return;
     const compatible = await toMoondreamCompatible(file);
-    if (compressBeforeScan) {
+    if (compressOdometerBeforeScan) {
       const result = await imageCompression(compatible, { maxSizeMB: 1.5, maxWidthOrHeight: 1920, initialQuality: 0.9, useWebWorker: true });
       const compressed = new File([result], compatible.name, { type: result.type });
       setSelectedOdoFile(compressed);

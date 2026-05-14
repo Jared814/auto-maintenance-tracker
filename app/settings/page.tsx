@@ -65,7 +65,8 @@ export default async function SettingsPage() {
         <ScanSettingsCard
           odometerModel={scanSettings.odometer_model}
           receiptModel={scanSettings.receipt_model}
-          compressBeforeScan={'compress_before_scan' in scanSettings ? !!(scanSettings as { compress_before_scan?: boolean }).compress_before_scan : false}
+          compressOdometerBeforeScan={!!(scanSettings as { compress_odometer_before_scan?: boolean }).compress_odometer_before_scan}
+          compressReceiptBeforeScan={!!(scanSettings as { compress_receipt_before_scan?: boolean }).compress_receipt_before_scan}
           engines={engines}
         />
 

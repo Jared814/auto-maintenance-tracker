@@ -14,7 +14,8 @@ export async function saveScanSettingsAction(_prev: unknown, formData: FormData)
   await upsertAccountScanSettings(session.user.id, {
     odometer_model: odometer || DEFAULT_ODOMETER_MODEL,
     receipt_model: receipt || DEFAULT_RECEIPT_MODEL,
-    compress_before_scan: formData.get('compress_before_scan') === 'on',
+    compress_odometer_before_scan: formData.get('compress_odometer_before_scan') === 'on',
+    compress_receipt_before_scan: formData.get('compress_receipt_before_scan') === 'on',
   });
 
   return { success: true };

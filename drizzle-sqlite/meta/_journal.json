@@ -50,6 +50,13 @@
       "when": 1778790325339,
       "tag": "0006_equal_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1778793176174,
+      "tag": "0007_careless_wallflower",
+      "breakpoints": true
     }
   ]
 }
