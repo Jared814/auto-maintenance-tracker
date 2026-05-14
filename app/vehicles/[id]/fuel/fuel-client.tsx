@@ -477,7 +477,7 @@ export function FuelClient({
                   {/* Odometer photo */}
                   <div className="space-y-1.5">
                     <Label>Odometer Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <input ref={odoFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleOdoFileChange} />
+                    <input ref={odoFileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleOdoFileChange} />
                     {selectedOdoFiles.length === 0 ? (
                       <button type="button" onClick={() => odoFileInputRef.current?.click()}
                         className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors">
@@ -511,7 +511,7 @@ export function FuelClient({
                   {/* Receipt / fuel pump photo */}
                   <div className="space-y-1.5">
                     <Label>Receipt or Pump Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <input ref={fileInputRef} type="file" name="photos" accept="image/*" className="hidden" onChange={handleFileChange} />
+                    <input ref={fileInputRef} type="file" name="photos" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
                     {selectedFiles.length === 0 ? (
                       <button type="button" onClick={() => fileInputRef.current?.click()} disabled={compressing}
                         className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-input py-3 text-xs text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50">
