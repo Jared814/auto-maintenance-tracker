@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
+import { getAccountScanSettings } from '@/lib/db';
+import { DEFAULT_ODOMETER_MODEL, DEFAULT_RECEIPT_MODEL } from '@/lib/scan-models';
 
 const VALID_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
@@ -107,6 +109,69 @@ async function callMoondream(apiKey: string, imageUrl: string, prompt: string): 
   }
 }
 
+async function callOpenRouter(apiKey: string, model: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+  try {
+    const imageUrl = imageBase64.startsWith('data:')
+      ? imageBase64
+      : `data:${mediaType};base64,${imageBase64}`;
+
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: imageUrl } },
+          ],
+        }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[callOpenRouter] HTTP error:', res.status, err);
+      return null;
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content ?? null;
+  } catch (err) {
+    console.error('[callOpenRouter]', err);
+    return null;
+  }
+}
+
+async function runScan(modelId: string, imageBase64: string, mediaType: string, prompt: string): Promise<string | null> {
+  if (modelId === 'moondream') {
+    const key = process.env.MOONDREAM_API_KEY;
+    if (!key) { console.error('[scan] MOONDREAM_API_KEY not set'); return null; }
+    const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${mediaType};base64,${imageBase64}`;
+    return callMoondream(key, imageUrl, prompt);
+  }
+
+  if (modelId === 'gemini-2.5-flash') {
+    const key = process.env.GOOGLE_AI_API_KEY;
+    if (!key) { console.error('[scan] GOOGLE_AI_API_KEY not set'); return null; }
+    return callGemini(key, imageBase64, mediaType, prompt);
+  }
+
+  if (modelId.startsWith('openrouter/')) {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) { console.error('[scan] OPENROUTER_API_KEY not set'); return null; }
+    const orModel = modelId.slice('openrouter/'.length);
+    return callOpenRouter(key, orModel, imageBase64, mediaType, prompt);
+  }
+
+  console.error('[scan] Unknown model:', modelId);
+  return null;
+}
+
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -116,13 +181,12 @@ export async function POST(request: Request) {
   const { imageBase64, mediaType, scanType = 'receipt' } = await request.json();
   const safeMediaType = VALID_MEDIA_TYPES.includes(mediaType) ? mediaType : 'image/jpeg';
 
+  const settings = await getAccountScanSettings(session.user.id);
+  const odometerModel = settings.odometer_model ?? DEFAULT_ODOMETER_MODEL;
+  const receiptModel = settings.receipt_model ?? DEFAULT_RECEIPT_MODEL;
+
   if (scanType === 'odometer') {
-    const moondreamKey = process.env.MOONDREAM_API_KEY;
-    if (!moondreamKey) {
-      return NextResponse.json({ error: 'Odometer scanning not configured' }, { status: 503 });
-    }
-    const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:${safeMediaType};base64,${imageBase64}`;
-    const answer = await callMoondream(moondreamKey, imageUrl, ODOMETER_PROMPT);
+    const answer = await runScan(odometerModel, imageBase64, safeMediaType, ODOMETER_PROMPT);
     if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
     const match = answer.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json(NULL_ODOMETER);
@@ -133,12 +197,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const geminiKey = process.env.GOOGLE_AI_API_KEY;
-  if (!geminiKey) {
-    return NextResponse.json({ error: 'Receipt scanning not configured' }, { status: 503 });
-  }
-
-  const answer = await callGemini(geminiKey, imageBase64, safeMediaType, RECEIPT_PROMPT);
+  const answer = await runScan(receiptModel, imageBase64, safeMediaType, RECEIPT_PROMPT);
   if (!answer) return NextResponse.json({ error: 'Scan failed' }, { status: 502 });
   const match = answer.match(/\{[\s\S]*\}/);
   if (!match) return NextResponse.json(NULL_RECEIPT);

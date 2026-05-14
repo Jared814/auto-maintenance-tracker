@@ -1,12 +1,15 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { getAccountById } from '@/lib/db';
+import { getAccountById, getAccountScanSettings } from '@/lib/db';
 import { AppShell } from '@/components/app-shell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings, Wrench, ChevronRight } from 'lucide-react';
 import { DatabaseBackupCard } from './database-backup-card';
+import { ScanSettingsCard } from './scan-settings-card';
+import { SCAN_MODELS } from '@/lib/scan-models';
+import type { ScanModelId } from '@/lib/scan-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +17,14 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const account = await getAccountById(session.user.id);
+  const [account, scanSettings] = await Promise.all([
+    getAccountById(session.user.id),
+    getAccountScanSettings(session.user.id),
+  ]);
+
+  const configuredKeys = new Set(
+    SCAN_MODELS.filter((m) => !!process.env[m.envKey]).map((m) => m.envKey)
+  );
 
   return (
     <AppShell>
@@ -36,6 +46,12 @@ export default async function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <ScanSettingsCard
+          odometerModel={scanSettings.odometer_model as ScanModelId}
+          receiptModel={scanSettings.receipt_model as ScanModelId}
+          configuredKeys={configuredKeys}
+        />
 
         <Card>
           <CardContent className="p-0">

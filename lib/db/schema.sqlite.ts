@@ -123,3 +123,9 @@ export const fuelReceipts = sqliteTable('fuel_receipts', {
 }, (table) => [
   index('idx_fuel_receipts_log_id').on(table.fuel_log_id),
 ]);
+
+export const accountSettings = sqliteTable('account_settings', {
+  account_id: text('account_id').primaryKey().references(() => accounts.id),
+  odometer_model: text('odometer_model').notNull().default('moondream'),
+  receipt_model: text('receipt_model').notNull().default('gemini-2.5-flash'),
+});

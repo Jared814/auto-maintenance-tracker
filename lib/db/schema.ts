@@ -9,4 +9,5 @@ export {
   accountDisabledTypes,
   receipts,
   fuelReceipts,
+  accountSettings,
 } from './schema.sqlite';

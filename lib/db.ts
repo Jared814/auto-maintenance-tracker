@@ -1,7 +1,7 @@
 import { eq, and, desc, isNull, or, notInArray, inArray, max } from 'drizzle-orm';
 import { unstable_cache } from 'next/cache';
 import { db, rawClient, runMigrations } from './db/index';
-import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, mileageLogs, accountDisabledTypes, accountTypeOverrides } from './db/schema';
+import { accounts, vehicles, maintenanceTypes, maintenanceLogs, receipts, fuelLogs, fuelReceipts, mileageLogs, accountDisabledTypes, accountTypeOverrides, accountSettings } from './db/schema';
 import { getNow } from './dates';
 import { nanoid } from 'nanoid';
 
@@ -606,4 +606,20 @@ export async function deleteFuelReceipt(id: string) {
   if (!receipt) return null;
   await db.delete(fuelReceipts).where(eq(fuelReceipts.id, id));
   return receipt;
+}
+
+// ---- ACCOUNT SETTINGS ----
+
+export async function getAccountScanSettings(accountId: string) {
+  const [row] = await db.select()
+    .from(accountSettings)
+    .where(eq(accountSettings.account_id, accountId))
+    .limit(1);
+  return row ?? { odometer_model: 'moondream', receipt_model: 'gemini-2.5-flash' };
+}
+
+export async function upsertAccountScanSettings(accountId: string, data: { odometer_model: string; receipt_model: string }) {
+  await db.insert(accountSettings)
+    .values({ account_id: accountId, ...data })
+    .onConflictDoUpdate({ target: accountSettings.account_id, set: data });
 }
