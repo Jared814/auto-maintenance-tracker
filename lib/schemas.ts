@@ -50,6 +50,7 @@ export const CreateMaintenanceLogSchema = z.object({
 });
 
 export const UpdateMaintenanceLogSchema = z.object({
+  maintenance_type_id: z.string().min(1).optional(),
   serviced_at: z.string().min(1).optional(),
   mileage_at_service: z.number().int().min(0).optional(),
   next_due_mileage: z.number().int().min(0).optional().nullable(),

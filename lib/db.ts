@@ -55,19 +55,22 @@ const SEED_TYPES = [
   // ELECTRICAL
   { name: 'Battery', category: 'electrical', miles: null, months: 48 },
   { name: 'Wiper Blades', category: 'electrical', miles: null, months: 12 },
+  { name: 'Other', category: 'other', miles: null, months: null },
 ] as const;
 
 async function seedMaintenanceTypes() {
-  const existing = await db.select({ id: maintenanceTypes.id })
+  const existing = await db
+    .select({ name: maintenanceTypes.name })
     .from(maintenanceTypes)
-    .where(eq(maintenanceTypes.is_default, true))
-    .limit(1);
+    .where(eq(maintenanceTypes.is_default, true));
 
-  if (existing.length > 0) return;
+  const existingNames = new Set(existing.map((r) => r.name));
+  const toInsert = SEED_TYPES.filter((t) => !existingNames.has(t.name));
+  if (toInsert.length === 0) return;
 
   console.log('[Database] Seeding maintenance types...');
   await db.insert(maintenanceTypes).values(
-    SEED_TYPES.map((t) => ({
+    toInsert.map((t) => ({
       id: nanoid(),
       name: t.name,
       category: t.category,
@@ -77,7 +80,7 @@ async function seedMaintenanceTypes() {
       account_id: null,
     }))
   );
-  console.log(`[Database] Seeded ${SEED_TYPES.length} maintenance types.`);
+  console.log(`[Database] Seeded ${toInsert.length} maintenance types.`);
 }
 
 // ---- ACCOUNTS ----
@@ -308,6 +311,8 @@ export async function deleteMaintenanceType(id: string, accountId: string) {
 }
 
 // ---- MAINTENANCE LOGS ----
+export type MaintenanceLog = typeof maintenanceLogs.$inferSelect;
+
 
 export async function createMaintenanceLog(data: {
   vehicle_id: string;
@@ -358,6 +363,7 @@ export async function getLatestLogByType(vehicleId: string, maintenanceTypeId: s
 }
 
 export async function updateMaintenanceLog(id: string, data: Partial<{
+  maintenance_type_id: string;
   serviced_at: string;
   mileage_at_service: number;
   next_due_mileage: number | null;

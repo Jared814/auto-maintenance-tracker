@@ -24,7 +24,6 @@ type PreviewRow = {
   dateDisplay: string; // original string for display
   description: string;
   typeId: string | null;      // existing type id, or null
-  newTypeName: string | null; // non-null when creating a new type
   cost: string | null;
   notes: string | null;
 };
@@ -75,7 +74,9 @@ function suggestTypeId(description: string, types: MaintenanceType[]): string | 
     const score = tTokens.filter((t) => dTokens.has(t)).length;
     if (score > 0 && (!best || score > best.score)) best = { id: type.id, score };
   }
-  return best && best.score >= 1 ? best.id : null;
+  if (best && best.score >= 1) return best.id;
+  // Fall back to the "Other" type if one exists
+  return types.find((t) => t.category === 'other')?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +144,6 @@ function parseText(raw: string, types: MaintenanceType[]): PreviewRow[] {
       dateDisplay: display,
       description: description.trim(),
       typeId,
-      newTypeName: typeId ? null : description.trim(),
       cost,
       notes,
     });
@@ -156,7 +156,6 @@ function parseText(raw: string, types: MaintenanceType[]): PreviewRow[] {
 // ---------------------------------------------------------------------------
 
 const SKIP_SENTINEL = '__skip__';
-const NEW_TYPE_SENTINEL = '__new__';
 
 export function ImportClient({
   vehicle,
@@ -183,19 +182,15 @@ export function ImportClient({
 
   function handleTypeChange(key: string, value: string) {
     if (value === SKIP_SENTINEL) {
-      updateRow(key, { skip: true, typeId: null, newTypeName: null });
-    } else if (value === NEW_TYPE_SENTINEL) {
-      const row = rows?.find((r) => r.key === key);
-      updateRow(key, { skip: false, typeId: null, newTypeName: row?.description ?? '' });
+      updateRow(key, { skip: true, typeId: null });
     } else {
-      updateRow(key, { skip: false, typeId: value, newTypeName: null });
+      updateRow(key, { skip: false, typeId: value });
     }
   }
 
   function dropdownValue(row: PreviewRow): string {
     if (row.skip) return SKIP_SENTINEL;
-    if (row.typeId) return row.typeId;
-    return NEW_TYPE_SENTINEL;
+    return row.typeId ?? SKIP_SENTINEL;
   }
 
   async function handleSubmit() {
@@ -207,7 +202,6 @@ export function ImportClient({
         mileage_at_service: r.mileage,
         description: r.description,
         typeId: r.typeId,
-        newTypeName: r.newTypeName,
         price_paid: r.cost,
         notes: r.notes,
       }));
@@ -346,7 +340,6 @@ export function ImportClient({
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           <option value={SKIP_SENTINEL}>— Skip row —</option>
-                          <option value={NEW_TYPE_SENTINEL}>✚ Create new type</option>
                           {Object.entries(grouped).map(([cat, types]) => (
                             <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
                               {types.map((t) => (
@@ -355,16 +348,6 @@ export function ImportClient({
                             </optgroup>
                           ))}
                         </select>
-                        {/* Editable name when creating new type */}
-                        {!row.skip && !row.typeId && (
-                          <input
-                            type="text"
-                            value={row.newTypeName ?? ''}
-                            onChange={(e) => updateRow(row.key, { newTypeName: e.target.value })}
-                            placeholder="New type name…"
-                            className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                        )}
                         {/* Show resolved type name */}
                         {!row.skip && row.typeId && (
                           <p className="mt-0.5 text-xs text-primary truncate">

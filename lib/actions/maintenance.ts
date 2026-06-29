@@ -119,6 +119,7 @@ export async function updateMaintenanceLogAction(id: string, prevState: ActionSt
   if (!log) return { error: 'Not found' };
 
   const rawData = {
+    maintenance_type_id: (formData.get('maintenance_type_id') as string) || undefined,
     serviced_at: formData.get('serviced_at'),
     mileage_at_service: formData.get('mileage_at_service') ? parseInt(formData.get('mileage_at_service') as string, 10) : undefined,
     next_due_mileage: formData.get('next_due_mileage') ? parseInt(formData.get('next_due_mileage') as string, 10) : null,
@@ -168,7 +169,6 @@ export type ImportRow = {
   mileage_at_service: number;
   description: string;       // original text, used as notes fallback
   typeId: string | null;     // existing type id
-  newTypeName: string | null; // create new type with this name when typeId is null
   price_paid: string | null;
   notes: string | null;
 };
@@ -190,15 +190,7 @@ export async function bulkImportMaintenanceAction(
     try {
       let typeId = row.typeId;
 
-      if (!typeId) {
-        if (!row.newTypeName?.trim()) { skipped++; continue; }
-        const newType = await createMaintenanceType({
-          name: row.newTypeName.trim(),
-          category: 'other',
-          account_id: session.user.id,
-        });
-        typeId = newType.id;
-      }
+      if (!typeId) { skipped++; continue; }
 
       await createMaintenanceLog({
         vehicle_id: vehicleId,

@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getMaintenanceLogById, getVehicleById } from '@/lib/db';
+import { getMaintenanceLogById, getVehicleById, getMaintenanceTypes } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { EditLogForm } from './edit-log-form';
 
@@ -11,11 +11,13 @@ export default async function EditMaintenanceLogPage({ params }: { params: Promi
 
   const { id, logId } = await params;
   
-  const vehicle = await getVehicleById(id, session.user.id);
+  const [vehicle, log, types] = await Promise.all([
+    getVehicleById(id, session.user.id),
+    getMaintenanceLogById(logId),
+    getMaintenanceTypes(session.user.id),
+  ]);
   if (!vehicle) redirect('/vehicles');
-
-  const log = await getMaintenanceLogById(logId);
   if (!log || log.vehicle_id !== id) redirect(`/vehicles/${id}/maintenance`);
 
-  return <EditLogForm vehicleId={id} log={log} />;
+  return <EditLogForm vehicleId={id} log={log} types={types} />;
 }
