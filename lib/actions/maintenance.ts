@@ -166,6 +166,20 @@ export async function deleteMaintenanceLogAction(id: string) {
   redirect(`/vehicles/${log.vehicle_id}/maintenance`);
 }
 
+export async function deleteMaintenanceLogFromListAction(id: string): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: 'Unauthorized' };
+
+  const log = await authorizeLog(id, session.user.id);
+  if (!log) return { error: 'Not found' };
+
+  const r2Keys = await deleteReceiptsByLogId(id);
+  await deleteMaintenanceLog(id);
+  await Promise.allSettled(r2Keys.map((key) => deleteFromR2(key)));
+  revalidatePath(`/vehicles/${log.vehicle_id}/maintenance`);
+  return {};
+}
+
 export type ImportRow = {
   serviced_at: string;       // ISO YYYY-MM-DD
   mileage_at_service: number;

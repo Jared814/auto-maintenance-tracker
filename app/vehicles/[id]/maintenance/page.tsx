@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, Plus } from 'lucide-react';
 import { formatDate, formatMileage, formatCurrency } from '@/lib/utils';
+import { DeleteLogButton } from './delete-log-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,31 +69,34 @@ export default async function MaintenanceListPage({
             {logs.map((log) => {
               const type = typeMap.get(log.maintenance_type_id);
               return (
-                <Link key={log.id} href={`/vehicles/${id}/maintenance/${log.id}`}>
-                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium">
-                            {type?.category === 'other' && log.description
-                              ? log.description
-                              : type?.name ?? 'Unknown Service'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(log.serviced_at)} · {formatMileage(log.mileage_at_service, vehicle.units)}
-                          </p>
-                          {type?.category === 'other' && (
-                            <p className="text-xs text-muted-foreground">Other</p>
+                <div key={log.id} className="flex items-center gap-2">
+                  <Link href={`/vehicles/${id}/maintenance/${log.id}`} className="flex-1 min-w-0">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium">
+                              {type?.category === 'other' && log.description
+                                ? log.description
+                                : type?.name ?? 'Unknown Service'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(log.serviced_at)} · {formatMileage(log.mileage_at_service, vehicle.units)}
+                            </p>
+                            {type?.category === 'other' && (
+                              <p className="text-xs text-muted-foreground">Other</p>
+                            )}
+                            {log.shop && <p className="text-xs text-muted-foreground">{log.shop}</p>}
+                          </div>
+                          {log.price_paid && (
+                            <p className="text-sm font-medium shrink-0">{formatCurrency(log.price_paid)}</p>
                           )}
-                          {log.shop && <p className="text-xs text-muted-foreground">{log.shop}</p>}
                         </div>
-                        {log.price_paid && (
-                          <p className="text-sm font-medium shrink-0">{formatCurrency(log.price_paid)}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  <DeleteLogButton logId={log.id} />
+                </div>
               );
             })}
           </div>
