@@ -236,6 +236,14 @@ export async function getMaintenanceTypes(accountId: string) {
   return applyOverrides(allTypes, overrides);
 }
 
+export async function getDefaultOtherType() {
+  const [row] = await db.select({ id: maintenanceTypes.id })
+    .from(maintenanceTypes)
+    .where(and(isNull(maintenanceTypes.account_id), eq(maintenanceTypes.name, 'Other')))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getMaintenanceTypesAll(accountId: string) {
   const [types, overrides] = await Promise.all([
     db.select().from(maintenanceTypes)

@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, createMaintenanceType, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createMaintenanceType, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getDefaultOtherType, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
 import { buildR2Key, deleteFromR2, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
@@ -23,7 +23,14 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
   }
 
   let maintenance_type_id = formData.get('maintenance_type_id') as string;
-  if (maintenance_type_id === 'custom') {
+  if (!maintenance_type_id) {
+    // No type selected — require a description and auto-assign the built-in "Other" type
+    const desc = (formData.get('description') as string)?.trim();
+    if (!desc) return { error: 'Please enter a description when no service type is selected' };
+    const otherType = await getDefaultOtherType();
+    if (!otherType) return { error: 'Could not resolve default service type' };
+    maintenance_type_id = otherType.id;
+  } else if (maintenance_type_id === 'custom') {
     const customName = (formData.get('custom_service_name') as string)?.trim();
     if (!customName) return { error: 'Service name is required for custom type' };
     const newType = await createMaintenanceType({ name: customName, category: 'other', account_id: session.user.id });

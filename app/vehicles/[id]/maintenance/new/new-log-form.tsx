@@ -50,8 +50,9 @@ export function NewLogForm({
     return acc;
   }, {});
   const selectedType = types.find((t) => t.id === typeId);
-  // Require description only for the built-in generic "Other" type, not for specifically-named custom types
+  // Require description for the built-in "Other" type, or when no type is selected
   const isOtherType = selectedType?.category === 'other' && selectedType?.account_id == null;
+  const showDescription = typeId === '' || isOtherType;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
@@ -109,13 +110,12 @@ export function NewLogForm({
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="maintenance_type_id">Service Type *</Label>
+            <Label htmlFor="maintenance_type_id">Service Type</Label>
             <select
               id="maintenance_type_id"
               name="maintenance_type_id"
               value={typeId}
               onChange={(e) => { setTypeId(e.target.value); setCustomName(''); }}
-              required
               className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Select service type…</option>
@@ -145,16 +145,18 @@ export function NewLogForm({
               />
             )}
           </div>
-          {isOtherType && (
+          {showDescription && (
             <div className="space-y-1.5">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">
+                Description {typeId === '' ? '*' : ''}
+              </Label>
               <Input
                 id="description"
                 name="description"
-                placeholder="e.g. Hand wax and detail"
+                placeholder={typeId === '' ? 'What was serviced?' : 'e.g. Hand wax and detail'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                required
+                required={typeId === ''}
               />
             </div>
           )}
