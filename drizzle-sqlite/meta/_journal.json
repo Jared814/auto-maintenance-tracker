@@ -64,6 +64,13 @@
       "when": 1782745038920,
       "tag": "0008_fair_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1782752690105,
+      "tag": "0009_log_description",
+      "breakpoints": true
     }
   ]
 }

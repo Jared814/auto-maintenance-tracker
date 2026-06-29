@@ -40,6 +40,7 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
     price_paid: formData.get('price_paid') || null,
     shop: formData.get('shop') || null,
     notes: formData.get('notes') || null,
+    description: formData.get('description') || null,
   };
 
   const parsed = CreateMaintenanceLogSchema.safeParse(rawData);
@@ -127,6 +128,7 @@ export async function updateMaintenanceLogAction(id: string, prevState: ActionSt
     price_paid: formData.get('price_paid') || null,
     shop: formData.get('shop') || null,
     notes: formData.get('notes') || null,
+    description: formData.get('description') || null,
   };
 
   const parsed = UpdateMaintenanceLogSchema.safeParse(rawData);
@@ -180,8 +182,13 @@ export async function bulkImportMaintenanceAction(
   const session = await auth();
   if (!session?.user?.id) return { error: 'Unauthorized' };
 
-  const vehicle = await getVehicleById(vehicleId, session.user.id);
+  const [vehicle, allTypes] = await Promise.all([
+    getVehicleById(vehicleId, session.user.id),
+    getMaintenanceTypes(session.user.id),
+  ]);
   if (!vehicle) return { error: 'Vehicle not found' };
+
+  const typeCategory = new Map(allTypes.map((t) => [t.id, t.category]));
 
   let imported = 0;
   let skipped = 0;
@@ -202,6 +209,7 @@ export async function bulkImportMaintenanceAction(
         price_paid: row.price_paid,
         shop: null,
         notes: row.notes ?? row.description,
+        description: typeCategory.get(typeId) === 'other' ? row.description : null,
       });
       imported++;
     } catch {

@@ -49,7 +49,14 @@ export default async function MaintenanceLogDetailPage({
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-bold">{type?.name ?? 'Service Record'}</h1>
+              <h1 className="text-xl font-bold">
+                {type?.category === 'other' && log.description
+                  ? log.description
+                  : type?.name ?? 'Service Record'}
+              </h1>
+              {type?.category === 'other' && (
+                <p className="text-xs text-muted-foreground">Other</p>
+              )}
               <p className="text-sm text-muted-foreground">{vehicle.name}</p>
             </div>
           </div>
@@ -63,6 +70,9 @@ export default async function MaintenanceLogDetailPage({
         <Card>
           <CardContent className="p-4 space-y-3">
             <Row label="Date" value={formatDate(log.serviced_at)} />
+            {log.description && type?.category !== 'other' && (
+              <Row label="Description" value={log.description} />
+            )}
             <Row label="Mileage" value={formatMileage(log.mileage_at_service, vehicle.units)} />
             {log.shop && <Row label="Shop" value={log.shop} />}
             {log.price_paid && <Row label="Price" value={formatCurrency(log.price_paid)} />}

@@ -35,6 +35,7 @@ export function NewLogForm({
   const [state, formAction] = useActionState<ActionState, FormData>(addLogWithVehicleId, null);
   const [typeId, setTypeId] = useState('');
   const [customName, setCustomName] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +45,8 @@ export function NewLogForm({
     acc[t.category].push(t);
     return acc;
   }, {});
+  const selectedType = types.find((t) => t.id === typeId);
+  const isOtherType = selectedType?.category === 'other';
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
@@ -130,6 +133,19 @@ export function NewLogForm({
               />
             )}
           </div>
+          {isOtherType && (
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Description *</Label>
+              <Input
+                id="description"
+                name="description"
+                placeholder="e.g. Hand wax and detail"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

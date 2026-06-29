@@ -47,6 +47,7 @@ export const CreateMaintenanceLogSchema = z.object({
   price_paid: z.string().optional().nullable(),
   shop: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
 });
 
 export const UpdateMaintenanceLogSchema = z.object({
@@ -58,6 +59,7 @@ export const UpdateMaintenanceLogSchema = z.object({
   price_paid: z.string().optional().nullable(),
   shop: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
 });
 
 export const CreateMaintenanceTypeSchema = z.object({

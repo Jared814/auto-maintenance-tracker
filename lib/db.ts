@@ -324,6 +324,7 @@ export async function createMaintenanceLog(data: {
   price_paid?: string | null;
   shop?: string | null;
   notes?: string | null;
+  description?: string | null;
 }) {
   const now = getNow();
   const [log] = await db.insert(maintenanceLogs).values({
@@ -371,6 +372,7 @@ export async function updateMaintenanceLog(id: string, data: Partial<{
   price_paid: string | null;
   shop: string | null;
   notes: string | null;
+  description: string | null;
 }>) {
   const [log] = await db.update(maintenanceLogs)
     .set({ ...data, updated_at: getNow() })

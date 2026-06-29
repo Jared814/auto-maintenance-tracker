@@ -52,6 +52,7 @@ export const maintenanceLogs = sqliteTable('maintenance_logs', {
   price_paid: text('price_paid'),
   shop: text('shop'),
   notes: text('notes'),
+  description: text('description'),
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),
 }, (table) => [

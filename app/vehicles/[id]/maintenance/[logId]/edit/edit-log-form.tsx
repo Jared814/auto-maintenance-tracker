@@ -60,12 +60,15 @@ export function EditLogForm({
   const [state, formAction] = useActionState<ActionState, FormData>(updateLogWithId, null);
 
   const [selectedTypeId, setSelectedTypeId] = useState<string>(log.maintenance_type_id ?? '');
+  const [description, setDescription] = useState<string>(log.description ?? '');
 
   const grouped = types.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
     if (!acc[t.category]) acc[t.category] = [];
     acc[t.category].push(t);
     return acc;
   }, {});
+  const selectedType = types.find((t) => t.id === selectedTypeId);
+  const isOtherType = selectedType?.category === 'other';
 
   return (
     <AppShell>
@@ -104,6 +107,19 @@ export function EditLogForm({
               ))}
             </select>
           </div>
+          {isOtherType && (
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Description *</Label>
+              <Input
+                id="description"
+                name="description"
+                placeholder="e.g. Hand wax and detail"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
