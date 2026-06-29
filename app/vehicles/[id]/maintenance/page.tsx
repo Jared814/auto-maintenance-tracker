@@ -76,15 +76,13 @@ export default async function MaintenanceListPage({
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-medium">
-                              {type?.category === 'other' && log.description
-                                ? log.description
-                                : type?.name ?? 'Unknown Service'}
+                              {log.description ?? type?.name ?? 'Unknown Service'}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {formatDate(log.serviced_at)} · {formatMileage(log.mileage_at_service, vehicle.units)}
                             </p>
-                            {type?.category === 'other' && (
-                              <p className="text-xs text-muted-foreground">Other</p>
+                            {log.description && type && (
+                              <p className="text-xs text-muted-foreground">{type.name}</p>
                             )}
                             {log.shop && <p className="text-xs text-muted-foreground">{log.shop}</p>}
                           </div>
