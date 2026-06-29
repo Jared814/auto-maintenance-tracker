@@ -13,11 +13,13 @@ export default async function MaintenanceTypesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const [allTypes, disabledIds, overridesMap] = await Promise.all([
+  const [rawTypes, disabledIds, overridesMap] = await Promise.all([
     getMaintenanceTypesAll(session.user.id),
     getDisabledTypeIds(session.user.id),
     getTypeOverrides(session.user.id),
   ]);
+  // Built-in "Other" is now handled implicitly when no service type is selected
+  const allTypes = rawTypes.filter((t) => !(t.account_id === null && t.name === 'Other'));
   const overrides = Object.fromEntries(overridesMap);
 
   return (

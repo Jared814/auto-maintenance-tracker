@@ -230,7 +230,7 @@ export async function getMaintenanceTypes(accountId: string) {
   ]);
 
   const allTypes = [...defaultTypes, ...customTypes].filter(
-    (t) => !disabledIds.includes(t.id)
+    (t) => !disabledIds.includes(t.id) && !(t.account_id === null && t.name === 'Other')
   );
 
   return applyOverrides(allTypes, overrides);
