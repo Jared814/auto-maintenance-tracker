@@ -18,6 +18,7 @@ interface MaintenanceType {
   id: string;
   name: string;
   category: string;
+  account_id?: string | null;
 }
 
 export function NewLogForm({
@@ -40,13 +41,17 @@ export function NewLogForm({
   const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const grouped = types.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
+  const customTypes = types.filter((t) => t.account_id != null);
+  const defaultTypes = types.filter((t) => t.account_id == null);
+
+  const grouped = defaultTypes.reduce<Record<string, MaintenanceType[]>>((acc, t) => {
     if (!acc[t.category]) acc[t.category] = [];
     acc[t.category].push(t);
     return acc;
   }, {});
   const selectedType = types.find((t) => t.id === typeId);
-  const isOtherType = selectedType?.category === 'other';
+  // Require description only for the built-in generic "Other" type, not for specifically-named custom types
+  const isOtherType = selectedType?.category === 'other' && selectedType?.account_id == null;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
@@ -114,6 +119,13 @@ export function NewLogForm({
               className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="">Select service type…</option>
+              {customTypes.length > 0 && (
+                <optgroup label="My Types">
+                  {customTypes.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </optgroup>
+              )}
               {Object.entries(grouped).map(([cat, catTypes]) => (
                 <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
                   {catTypes.map((t) => (
@@ -121,7 +133,7 @@ export function NewLogForm({
                   ))}
                 </optgroup>
               ))}
-              <option value="custom">Other (custom)…</option>
+              <option value="custom">+ New custom type…</option>
             </select>
             {typeId === 'custom' && (
               <Input
