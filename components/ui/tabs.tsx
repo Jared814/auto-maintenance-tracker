@@ -44,7 +44,7 @@ export function TabsList({
     <div
       role="tablist"
       className={cn(
-        'flex border-b border-border bg-background sticky top-0 z-10',
+        'flex bg-muted rounded-xl p-1 gap-1 sticky top-0 z-10',
         className
       )}
     >
@@ -70,10 +70,10 @@ export function TabsTrigger({
       aria-selected={isActive}
       onClick={() => setActive(value)}
       className={cn(
-        'flex-1 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
+        'flex-1 rounded-lg py-2.5 text-sm transition-all duration-150',
         isActive
-          ? 'border-primary text-primary'
-          : 'border-transparent text-muted-foreground hover:text-foreground'
+          ? 'bg-background text-foreground font-semibold shadow-sm'
+          : 'text-muted-foreground font-medium hover:text-foreground'
       , className)}
     >
       {children}

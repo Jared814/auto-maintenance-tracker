@@ -17,7 +17,7 @@ export function VehicleTabs({
       {/* Mobile: tabbed layout */}
       <div className="md:hidden">
         <Tabs defaultValue="maintenance">
-          <TabsList>
+          <TabsList className="mx-4 mt-2 mb-1">
             <TabsTrigger value="mpg">
               <span className="flex flex-col items-center gap-0.5">
                 <Fuel className="size-4" />
