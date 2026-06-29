@@ -23,6 +23,7 @@ export const vehicles = sqliteTable('vehicles', {
   qr_pin_hash: text('qr_pin_hash').notNull(),
   created_at: text('created_at').notNull(),
   updated_at: text('updated_at').notNull(),
+  info_blob: text('info_blob'),
 }, (table) => [
   index('idx_vehicles_account_id').on(table.account_id),
   index('idx_vehicles_qr_slug').on(table.qr_slug),

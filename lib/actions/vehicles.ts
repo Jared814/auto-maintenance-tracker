@@ -128,3 +128,21 @@ export async function deleteVehicleAction(id: string) {
   revalidatePath('/vehicles');
   redirect('/vehicles');
 }
+
+export async function updateVehicleInfoAction(id: string, prevState: ActionState, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: 'Unauthorized' };
+
+  const existing = await getVehicleById(id, session.user.id);
+  if (!existing) return { error: 'Not found' };
+
+  const raw = (formData.get('info_blob') as string) ?? '';
+
+  try {
+    await updateVehicle(id, session.user.id, { info_blob: raw || null });
+    revalidatePath(`/vehicles/${id}`);
+    return { success: true as const };
+  } catch {
+    return { error: 'Failed to save vehicle info' };
+  }
+}

@@ -57,6 +57,13 @@
       "when": 1778793176174,
       "tag": "0007_careless_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782745038920,
+      "tag": "0008_fair_miracleman",
+      "breakpoints": true
     }
   ]
 }

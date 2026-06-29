@@ -173,6 +173,7 @@ export async function updateVehicle(id: string, accountId: string, data: Partial
   units: string;
   current_mileage: number | null;
   qr_pin_hash: string;
+  info_blob: string | null;
 }>) {
   const [vehicle] = await db.update(vehicles)
     .set({ ...data, updated_at: getNow() })
