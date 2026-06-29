@@ -107,6 +107,39 @@ export function MpgPanel({
 
   const sortedLogs = [...localLogs].sort((a, b) => b.filled_at.localeCompare(a.filled_at));
 
+  // ---- Yearly summary ----
+  const chronological = [...localLogs].sort((a, b) => a.filled_at.localeCompare(b.filled_at));
+  const byYear = new Map<number, typeof localLogs>();
+  for (const log of chronological) {
+    const year = parseInt(log.filled_at.slice(0, 4), 10);
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year)!.push(log);
+  }
+  const sortedYears = [...byYear.keys()].sort((a, b) => a - b);
+  const yearStats = sortedYears.map((year, i) => {
+    const logs = byYear.get(year)!;
+    const maxMileage = Math.max(...logs.map((l) => l.mileage));
+    const prevYear = sortedYears[i - 1];
+    const prevMaxMileage = prevYear !== undefined
+      ? Math.max(...byYear.get(prevYear)!.map((l) => l.mileage))
+      : null;
+    const miles = prevMaxMileage !== null
+      ? maxMileage - prevMaxMileage
+      : maxMileage - Math.min(...logs.map((l) => l.mileage));
+
+    let totalCost = 0;
+    let hasCost = false;
+    for (const log of logs) {
+      const cost = log.total_cost
+        ? parseFloat(log.total_cost)
+        : log.price_per_unit
+          ? parseFloat(log.price_per_unit) * log.fuel_quantity
+          : null;
+      if (cost !== null && !isNaN(cost)) { totalCost += cost; hasCost = true; }
+    }
+    return { year, miles, totalCost: hasCost ? totalCost : null };
+  }).reverse(); // most recent first
+
   async function handleDeleteLog(id: string) {
     if (!confirm('Delete this fill-up record?')) return;
     await deleteFuelLogAction(id);
@@ -191,6 +224,34 @@ export function MpgPanel({
             ? 'Log your first fill-up to start tracking fuel economy.'
             : 'Log one more fill-up to calculate economy.'}
         </p>
+      )}
+
+      {/* Yearly summary */}
+      {yearStats.length > 0 && (
+        <>
+          <h2 className="text-base font-semibold">By Year</h2>
+          <div className="space-y-2">
+            {yearStats.map(({ year, miles, totalCost }) => (
+              <div key={year} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between gap-4">
+                <span className="font-semibold tabular-nums">{year}</span>
+                <div className="flex items-center gap-6 text-sm">
+                  {miles > 0 && (
+                    <div className="text-right">
+                      <p className="font-medium tabular-nums">{miles.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">{vehicleUnits}</p>
+                    </div>
+                  )}
+                  {totalCost !== null && (
+                    <div className="text-right">
+                      <p className="font-medium tabular-nums">${totalCost.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">fuel cost</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Fill history */}
