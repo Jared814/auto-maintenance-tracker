@@ -13,48 +13,36 @@ export function VehicleTabs({
   infoContent: React.ReactNode;
 }) {
   return (
-    <>
-      {/* Mobile: tabbed layout */}
-      <div className="md:hidden">
-        <Tabs defaultValue="maintenance">
-          <TabsList className="mx-4 mt-2 mb-1">
-            <TabsTrigger value="mpg">
-              <span className="flex flex-col items-center gap-0.5">
-                <Fuel className="size-4" />
-                <span className="text-xs">MPG</span>
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="maintenance">
-              <span className="flex flex-col items-center gap-0.5">
-                <Wrench className="size-4" />
-                <span className="text-xs">Maintenance</span>
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="info">
-              <span className="flex flex-col items-center gap-0.5">
-                <Info className="size-4" />
-                <span className="text-xs">Vehicle Info</span>
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="mpg" className="p-4 space-y-4">
-            {mpgContent}
-          </TabsContent>
-          <TabsContent value="maintenance" className="p-4 space-y-4">
-            {maintenanceContent}
-          </TabsContent>
-          <TabsContent value="info" className="p-4 space-y-4">
-            {infoContent}
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Desktop: all sections visible */}
-      <div className="hidden md:block space-y-6">
+    <Tabs defaultValue="maintenance">
+      <TabsList className="mx-4 mt-2 mb-1">
+        <TabsTrigger value="mpg">
+          <span className="flex items-center gap-1.5">
+            <Fuel className="size-4" />
+            <span>MPG Tracker</span>
+          </span>
+        </TabsTrigger>
+        <TabsTrigger value="maintenance">
+          <span className="flex items-center gap-1.5">
+            <Wrench className="size-4" />
+            <span>Maintenance</span>
+          </span>
+        </TabsTrigger>
+        <TabsTrigger value="info">
+          <span className="flex items-center gap-1.5">
+            <Info className="size-4" />
+            <span>Vehicle Info</span>
+          </span>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="mpg" className="p-4 space-y-4">
         {mpgContent}
+      </TabsContent>
+      <TabsContent value="maintenance" className="p-4 space-y-4">
         {maintenanceContent}
+      </TabsContent>
+      <TabsContent value="info" className="p-4 space-y-4">
         {infoContent}
-      </div>
-    </>
+      </TabsContent>
+    </Tabs>
   );
 }

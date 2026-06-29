@@ -224,25 +224,6 @@ export default async function VehicleDetailPage({
           </div>
         </div>
 
-        {/* Vehicle info row — visible on desktop above the content, hidden on mobile (moved to Info tab) */}
-        <div className="hidden md:flex flex-wrap gap-4 text-sm">
-          <div>
-            <span className="text-muted-foreground">Mileage: </span>
-            <span className="font-medium">{formatMileage(effectiveMileage, vehicle.units)}</span>
-          </div>
-          {vehicle.license_plate && (
-            <div>
-              <span className="text-muted-foreground">Plate: </span>
-              <span className="font-medium">{vehicle.license_plate}</span>
-            </div>
-          )}
-          {vehicle.vin && (
-            <div>
-              <span className="text-muted-foreground">VIN: </span>
-              <span className="font-medium font-mono text-xs">{vehicle.vin}</span>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Tabbed content — full-bleed below header */}
