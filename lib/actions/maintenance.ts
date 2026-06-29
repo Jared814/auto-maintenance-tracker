@@ -162,3 +162,62 @@ export async function deleteMaintenanceLogAction(id: string) {
   revalidatePath(`/vehicles/${log.vehicle_id}`);
   redirect(`/vehicles/${log.vehicle_id}/maintenance`);
 }
+
+export type ImportRow = {
+  serviced_at: string;       // ISO YYYY-MM-DD
+  mileage_at_service: number;
+  description: string;       // original text, used as notes fallback
+  typeId: string | null;     // existing type id
+  newTypeName: string | null; // create new type with this name when typeId is null
+  price_paid: string | null;
+  notes: string | null;
+};
+
+export async function bulkImportMaintenanceAction(
+  vehicleId: string,
+  rows: ImportRow[],
+): Promise<{ imported: number; skipped: number } | { error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: 'Unauthorized' };
+
+  const vehicle = await getVehicleById(vehicleId, session.user.id);
+  if (!vehicle) return { error: 'Vehicle not found' };
+
+  let imported = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    try {
+      let typeId = row.typeId;
+
+      if (!typeId) {
+        if (!row.newTypeName?.trim()) { skipped++; continue; }
+        const newType = await createMaintenanceType({
+          name: row.newTypeName.trim(),
+          category: 'other',
+          account_id: session.user.id,
+        });
+        typeId = newType.id;
+      }
+
+      await createMaintenanceLog({
+        vehicle_id: vehicleId,
+        maintenance_type_id: typeId,
+        serviced_at: row.serviced_at,
+        mileage_at_service: row.mileage_at_service,
+        next_due_mileage: null,
+        next_due_date: null,
+        price_paid: row.price_paid,
+        shop: null,
+        notes: row.notes ?? row.description,
+      });
+      imported++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  revalidatePath(`/vehicles/${vehicleId}`);
+  revalidatePath(`/vehicles/${vehicleId}/maintenance`);
+  return { imported, skipped };
+}

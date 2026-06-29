@@ -103,14 +103,19 @@ export default async function VehicleDetailPage({
 
   const maintenanceContent = (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Maintenance Status</h2>
-        <Link href={`/vehicles/${id}/maintenance/new`}>
-          <Button size="sm">
-            <Plus className="size-4" />
-            Log Service
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href={`/vehicles/${id}/import`}>
+            <Button size="sm" variant="outline">Import</Button>
+          </Link>
+          <Link href={`/vehicles/${id}/maintenance/new`}>
+            <Button size="sm">
+              <Plus className="size-4" />
+              Log Service
+            </Button>
+          </Link>
+        </div>
       </div>
       <div className="space-y-4">
         {grouped.map(({ category, label, items }) => (
