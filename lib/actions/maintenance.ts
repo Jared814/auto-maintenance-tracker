@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createMaintenanceType, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
 import { buildR2Key, deleteFromR2, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
@@ -22,9 +22,17 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
     return { error: 'Unauthorized' };
   }
 
+  let maintenance_type_id = formData.get('maintenance_type_id') as string;
+  if (maintenance_type_id === 'custom') {
+    const customName = (formData.get('custom_service_name') as string)?.trim();
+    if (!customName) return { error: 'Service name is required for custom type' };
+    const newType = await createMaintenanceType({ name: customName, category: 'other', account_id: session.user.id });
+    maintenance_type_id = newType.id;
+  }
+
   const rawData = {
     vehicle_id: vehicleId,
-    maintenance_type_id: formData.get('maintenance_type_id'),
+    maintenance_type_id,
     serviced_at: formData.get('serviced_at'),
     mileage_at_service: formData.get('mileage_at_service') ? parseInt(formData.get('mileage_at_service') as string, 10) : undefined,
     next_due_mileage: formData.get('next_due_mileage') ? parseInt(formData.get('next_due_mileage') as string, 10) : null,

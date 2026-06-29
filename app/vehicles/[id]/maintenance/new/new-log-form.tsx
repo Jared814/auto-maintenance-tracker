@@ -33,6 +33,8 @@ export function NewLogForm({
 }) {
   const addLogWithVehicleId = addMaintenanceLogAction.bind(null, vehicleId);
   const [state, formAction] = useActionState<ActionState, FormData>(addLogWithVehicleId, null);
+  const [typeId, setTypeId] = useState('');
+  const [customName, setCustomName] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +105,8 @@ export function NewLogForm({
             <select
               id="maintenance_type_id"
               name="maintenance_type_id"
+              value={typeId}
+              onChange={(e) => { setTypeId(e.target.value); setCustomName(''); }}
               required
               className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -114,7 +118,17 @@ export function NewLogForm({
                   ))}
                 </optgroup>
               ))}
+              <option value="custom">Other (custom)…</option>
             </select>
+            {typeId === 'custom' && (
+              <Input
+                name="custom_service_name"
+                placeholder="e.g. Cabin air filter replacement"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                required
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
