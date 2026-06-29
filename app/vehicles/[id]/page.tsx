@@ -208,6 +208,11 @@ export default async function VehicleDetailPage({
                   {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ')}
                 </p>
               )}
+              {effectiveMileage !== null && (
+                <p className="text-sm font-medium mt-0.5">
+                  {formatMileage(effectiveMileage, vehicle.units)}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">
