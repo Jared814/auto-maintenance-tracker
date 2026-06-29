@@ -468,6 +468,21 @@ export async function getFuelLogsByVehicleId(vehicleId: string) {
     .orderBy(desc(fuelLogs.filled_at));
 }
 
+export async function getFuelLogsByVehicleIds(vehicleIds: string[]) {
+  if (vehicleIds.length === 0) return [];
+  return db
+    .select({
+      vehicle_id: fuelLogs.vehicle_id,
+      filled_at: fuelLogs.filled_at,
+      mileage: fuelLogs.mileage,
+      fuel_quantity: fuelLogs.fuel_quantity,
+      fuel_unit: fuelLogs.fuel_unit,
+    })
+    .from(fuelLogs)
+    .where(inArray(fuelLogs.vehicle_id, vehicleIds))
+    .orderBy(fuelLogs.vehicle_id, fuelLogs.filled_at);
+}
+
 export async function getFuelLogById(id: string) {
   const [log] = await db.select()
     .from(fuelLogs)
