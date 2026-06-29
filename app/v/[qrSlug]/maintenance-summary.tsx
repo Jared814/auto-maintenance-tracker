@@ -379,6 +379,7 @@ interface LogServiceFormProps {
 function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
   const [pin, setPin] = useState('');
   const [typeId, setTypeId] = useState('');
+  const [customName, setCustomName] = useState('');
   const [date, setDate] = useState(getToday());
   const [mileage, setMileage] = useState('');
   const [price, setPrice] = useState('');
@@ -407,6 +408,7 @@ function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
         body: JSON.stringify({
           pin,
           maintenance_type_id: typeId,
+          custom_service_name: typeId === 'custom' ? customName : undefined,
           serviced_at: date,
           mileage_at_service: Number(mileage),
           price_paid: price || null,
@@ -456,7 +458,7 @@ function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
 
       <div className="space-y-1">
         <label className="text-xs font-medium text-muted-foreground">Service Type *</label>
-        <select value={typeId} onChange={(e) => setTypeId(e.target.value)} className={inputClass} required>
+        <select value={typeId} onChange={(e) => { setTypeId(e.target.value); setCustomName(''); }} className={inputClass} required>
           <option value="">Select type…</option>
           {Object.entries(grouped).map(([cat, catTypes]) => (
             <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
@@ -465,7 +467,18 @@ function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
               ))}
             </optgroup>
           ))}
+          <option value="custom">Other (custom)…</option>
         </select>
+        {typeId === 'custom' && (
+          <input
+            type="text"
+            placeholder="e.g. Cabin air filter replacement"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            className={inputClass}
+            required
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -503,7 +516,7 @@ function LogServiceForm({ qrSlug, types, onSuccess }: LogServiceFormProps) {
 
       <button
         type="submit"
-        disabled={submitting || !pin || !typeId || !date || !mileage}
+        disabled={submitting || !pin || !typeId || !date || !mileage || (typeId === 'custom' && !customName.trim())}
         className="w-full h-9 bg-primary text-primary-foreground text-sm font-medium rounded-lg disabled:opacity-50 transition-opacity"
       >
         {submitting ? 'Saving…' : 'Save Service Record'}
