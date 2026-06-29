@@ -98,16 +98,15 @@ export function EditLogForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="maintenance_type_id">Service Type *</Label>
+            <Label htmlFor="maintenance_type_id">Service Type</Label>
             <select
               id="maintenance_type_id"
               name="maintenance_type_id"
               value={selectedTypeId}
               onChange={(e) => setSelectedTypeId(e.target.value)}
-              required
               className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Select service type…</option>
+              <option value="">None</option>
               {Object.entries(grouped).map(([cat, catTypes]) => (
                 <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
                   {catTypes.map((t) => (

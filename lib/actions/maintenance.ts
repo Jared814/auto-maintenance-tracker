@@ -124,8 +124,15 @@ export async function updateMaintenanceLogAction(id: string, prevState: ActionSt
   const log = await authorizeLog(id, session.user.id);
   if (!log) return { error: 'Not found' };
 
+  let typeIdRaw = (formData.get('maintenance_type_id') as string) || '';
+  if (!typeIdRaw) {
+    const otherType = await getDefaultOtherType();
+    if (!otherType) return { error: 'Could not resolve default service type' };
+    typeIdRaw = otherType.id;
+  }
+
   const rawData = {
-    maintenance_type_id: (formData.get('maintenance_type_id') as string) || undefined,
+    maintenance_type_id: typeIdRaw,
     serviced_at: formData.get('serviced_at'),
     mileage_at_service: formData.get('mileage_at_service') ? parseInt(formData.get('mileage_at_service') as string, 10) : undefined,
     next_due_mileage: formData.get('next_due_mileage') ? parseInt(formData.get('next_due_mileage') as string, 10) : null,
