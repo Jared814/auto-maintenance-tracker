@@ -73,6 +73,17 @@ export default async function VehicleDetailPage({
     ...mileageLogs.map((m) => m.mileage),
   ) || null;
 
+  // Find the date of the record that produced effectiveMileage
+  const mileageCandidates = [
+    ...logs.map((l) => ({ mileage: l.mileage_at_service, date: l.serviced_at })),
+    ...fuelLogs.map((f) => ({ mileage: f.mileage, date: f.filled_at })),
+    ...mileageLogs.map((m) => ({ mileage: m.mileage, date: m.logged_at })),
+  ];
+  const effectiveMileageDate = mileageCandidates.reduce<{ mileage: number; date: string } | null>(
+    (best, c) => (!best || c.mileage > best.mileage) ? c : best,
+    null
+  )?.date ?? null;
+
   const statusByType = allTypes.map((type) => {
     const latestLog =
       logs
@@ -211,6 +222,11 @@ export default async function VehicleDetailPage({
               {effectiveMileage !== null && (
                 <p className="text-sm font-medium mt-0.5">
                   {formatMileage(effectiveMileage, vehicle.units)}
+                  {effectiveMileageDate && (
+                    <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                      ({formatDate(effectiveMileageDate)})
+                    </span>
+                  )}
                 </p>
               )}
             </div>
