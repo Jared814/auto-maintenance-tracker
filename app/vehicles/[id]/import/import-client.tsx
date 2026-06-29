@@ -160,9 +160,11 @@ const SKIP_SENTINEL = '__skip__';
 export function ImportClient({
   vehicle,
   maintenanceTypes,
+  otherTypeId,
 }: {
   vehicle: { id: string; name: string; units: string };
   maintenanceTypes: MaintenanceType[];
+  otherTypeId: string | null;
 }) {
   const router = useRouter();
 
@@ -340,6 +342,9 @@ export function ImportClient({
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                         >
                           <option value={SKIP_SENTINEL}>— Skip row —</option>
+                          {otherTypeId && (
+                            <option value={otherTypeId}>Other / Unclassified</option>
+                          )}
                           {Object.entries(grouped).map(([cat, types]) => (
                             <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
                               {types.map((t) => (
