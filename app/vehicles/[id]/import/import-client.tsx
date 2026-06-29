@@ -171,7 +171,7 @@ export function ImportClient({
   const [raw, setRaw] = useState('');
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ imported: number; skipped: number } | { error: string } | null>(null);
+  const [result, setResult] = useState<{ imported: number; skipped: number; duplicates: number } | { error: string } | null>(null);
 
   function handleParse() {
     setResult(null);
@@ -385,7 +385,7 @@ export function ImportClient({
               }`}>
                 {'error' in result
                   ? <><AlertCircle className="size-4 shrink-0" />{result.error}</>
-                  : <><CheckCircle className="size-4 shrink-0" />Imported {result.imported} record{result.imported !== 1 ? 's' : ''}{result.skipped > 0 ? ` · ${result.skipped} skipped` : ''}. Redirecting…</>
+                  : <><CheckCircle className="size-4 shrink-0" />Imported {result.imported} record{result.imported !== 1 ? 's' : ''}{'duplicates' in result && result.duplicates > 0 ? ` · ${result.duplicates} duplicate${result.duplicates !== 1 ? 's' : ''} skipped` : ''}{'skipped' in result && result.skipped > 0 ? ` · ${result.skipped} failed` : ''}. Redirecting…</>
                 }
               </div>
             )}

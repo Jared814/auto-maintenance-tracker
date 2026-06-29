@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from '@/auth';
-import { createMaintenanceLog, createMaintenanceType, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getDefaultOtherType, getMaintenanceLogById, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
+import { createMaintenanceLog, createMaintenanceType, createReceipt, deleteMaintenanceLog, deleteReceiptsByLogId, getDefaultOtherType, getMaintenanceLogById, getMaintenanceLogsByVehicleId, getMaintenanceTypes, getVehicleById, updateMaintenanceLog } from '@/lib/db';
 import { CreateMaintenanceLogSchema, UpdateMaintenanceLogSchema } from '@/lib/schemas';
 import { buildR2Key, deleteFromR2, isR2Configured, uploadPhotoToR2 } from '@/lib/r2-upload';
 import { revalidatePath } from 'next/cache';
@@ -199,26 +199,42 @@ export type ImportRow = {
 export async function bulkImportMaintenanceAction(
   vehicleId: string,
   rows: ImportRow[],
-): Promise<{ imported: number; skipped: number } | { error: string }> {
+): Promise<{ imported: number; skipped: number; duplicates: number } | { error: string }> {
   const session = await auth();
   if (!session?.user?.id) return { error: 'Unauthorized' };
 
-  const [vehicle, allTypes, otherType] = await Promise.all([
+  const [vehicle, allTypes, otherType, existingLogs] = await Promise.all([
     getVehicleById(vehicleId, session.user.id),
     getMaintenanceTypes(session.user.id),
     getDefaultOtherType(),
+    getMaintenanceLogsByVehicleId(vehicleId),
   ]);
   if (!vehicle) return { error: 'Vehicle not found' };
 
   const typeCategory = new Map(allTypes.map((t) => [t.id, t.category]));
 
+  // Build a dedup key set from existing logs.
+  // Key: `${mileage}_${typeId}` — for Other/Unclassified also include description
+  // so two different unclassified services at the same odometer aren't collapsed.
+  const existingKeys = new Set(existingLogs.map((l) =>
+    l.maintenance_type_id === otherType?.id && l.description
+      ? `${l.mileage_at_service}_${l.maintenance_type_id}_${l.description.toLowerCase().trim()}`
+      : `${l.mileage_at_service}_${l.maintenance_type_id}`
+  ));
+
   let imported = 0;
   let skipped = 0;
+  let duplicates = 0;
 
   for (const row of rows) {
     try {
       let typeId = row.typeId ?? otherType?.id ?? null;
       if (!typeId) { skipped++; continue; }
+
+      const rowKey = (typeId === otherType?.id && row.description)
+        ? `${row.mileage_at_service}_${typeId}_${row.description.toLowerCase().trim()}`
+        : `${row.mileage_at_service}_${typeId}`;
+      if (existingKeys.has(rowKey)) { duplicates++; continue; }
 
       await createMaintenanceLog({
         vehicle_id: vehicleId,
@@ -240,5 +256,5 @@ export async function bulkImportMaintenanceAction(
 
   revalidatePath(`/vehicles/${vehicleId}`);
   revalidatePath(`/vehicles/${vehicleId}/maintenance`);
-  return { imported, skipped };
+  return { imported, skipped, duplicates };
 }
