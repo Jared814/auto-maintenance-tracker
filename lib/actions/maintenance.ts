@@ -203,9 +203,10 @@ export async function bulkImportMaintenanceAction(
   const session = await auth();
   if (!session?.user?.id) return { error: 'Unauthorized' };
 
-  const [vehicle, allTypes] = await Promise.all([
+  const [vehicle, allTypes, otherType] = await Promise.all([
     getVehicleById(vehicleId, session.user.id),
     getMaintenanceTypes(session.user.id),
+    getDefaultOtherType(),
   ]);
   if (!vehicle) return { error: 'Vehicle not found' };
 
@@ -216,8 +217,7 @@ export async function bulkImportMaintenanceAction(
 
   for (const row of rows) {
     try {
-      let typeId = row.typeId;
-
+      let typeId = row.typeId ?? otherType?.id ?? null;
       if (!typeId) { skipped++; continue; }
 
       await createMaintenanceLog({
@@ -230,7 +230,7 @@ export async function bulkImportMaintenanceAction(
         price_paid: row.price_paid,
         shop: null,
         notes: row.notes ?? row.description,
-        description: typeCategory.get(typeId) === 'other' ? row.description : null,
+        description: (typeCategory.get(typeId) === 'other' || typeId === otherType?.id) ? row.description : null,
       });
       imported++;
     } catch {
