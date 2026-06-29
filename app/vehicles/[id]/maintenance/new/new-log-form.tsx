@@ -50,9 +50,6 @@ export function NewLogForm({
     return acc;
   }, {});
   const selectedType = types.find((t) => t.id === typeId);
-  // Require description for the built-in "Other" type, or when no type is selected
-  const isOtherType = selectedType?.category === 'other' && selectedType?.account_id == null;
-  const showDescription = typeId === '' || isOtherType;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = Array.from(e.target.files ?? []);
@@ -110,6 +107,18 @@ export function NewLogForm({
           )}
 
           <div className="space-y-1.5">
+            <Label htmlFor="description">Description *</Label>
+            <Input
+              id="description"
+              name="description"
+              placeholder="e.g. Oil & filter change with Mobil 1 5W30"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="maintenance_type_id">Service Type</Label>
             <select
               id="maintenance_type_id"
@@ -145,21 +154,6 @@ export function NewLogForm({
               />
             )}
           </div>
-          {showDescription && (
-            <div className="space-y-1.5">
-              <Label htmlFor="description">
-                Description {typeId === '' ? '*' : ''}
-              </Label>
-              <Input
-                id="description"
-                name="description"
-                placeholder={typeId === '' ? 'What was serviced?' : 'e.g. Hand wax and detail'}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required={typeId === ''}
-              />
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

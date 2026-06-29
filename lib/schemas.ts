@@ -47,7 +47,7 @@ export const CreateMaintenanceLogSchema = z.object({
   price_paid: z.string().optional().nullable(),
   shop: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  description: z.string().min(1, 'Description is required'),
 });
 
 export const UpdateMaintenanceLogSchema = z.object({

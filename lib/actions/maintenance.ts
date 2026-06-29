@@ -24,9 +24,7 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
 
   let maintenance_type_id = formData.get('maintenance_type_id') as string;
   if (!maintenance_type_id) {
-    // No type selected — require a description and auto-assign the built-in "Other" type
-    const desc = (formData.get('description') as string)?.trim();
-    if (!desc) return { error: 'Please enter a description when no service type is selected' };
+    // No type selected — auto-assign the built-in "Other" type; schema enforces description
     const otherType = await getDefaultOtherType();
     if (!otherType) return { error: 'Could not resolve default service type' };
     maintenance_type_id = otherType.id;
@@ -47,7 +45,7 @@ export async function addMaintenanceLogAction(vehicleId: string, prevState: Acti
     price_paid: formData.get('price_paid') || null,
     shop: formData.get('shop') || null,
     notes: formData.get('notes') || null,
-    description: formData.get('description') || null,
+    description: (formData.get('description') as string)?.trim() || null,
   };
 
   const parsed = CreateMaintenanceLogSchema.safeParse(rawData);
