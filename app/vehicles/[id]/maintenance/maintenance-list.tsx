@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, X } from 'lucide-react';
@@ -90,33 +89,15 @@ export function MaintenanceList({
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No records match &ldquo;{query}&rdquo;</p>
           ) : (
-            <div className="space-y-3">
+            <div className="rounded-lg border border-border divide-y divide-border overflow-hidden">
               {filtered.map((log) => {
                 const type = typeMap.get(log.maintenance_type_id);
                 return (
-                  <div key={log.id} className="flex items-center gap-2">
-                    <Link href={`/vehicles/${vehicleId}/maintenance/${log.id}`} className="flex-1 min-w-0">
-                      <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="font-medium">
-                                {log.description ?? type?.name ?? 'Unknown Service'}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {formatDate(log.serviced_at)} · {formatMileage(log.mileage_at_service, vehicleUnits)}
-                              </p>
-                              {log.description && type && (
-                                <p className="text-xs text-muted-foreground">{type.name}</p>
-                              )}
-                              {log.shop && <p className="text-xs text-muted-foreground">{log.shop}</p>}
-                            </div>
-                            {log.price_paid && (
-                              <p className="text-sm font-medium shrink-0">{formatCurrency(log.price_paid)}</p>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
+                  <div key={log.id} className="flex items-center gap-1 px-3 py-1.5 hover:bg-muted/40 transition-colors">
+                    <Link href={`/vehicles/${vehicleId}/maintenance/${log.id}`} className="flex-1 min-w-0 grid grid-cols-[1fr_auto_auto] gap-x-3 items-center">
+                      <span className="text-sm truncate">{log.description ?? type?.name ?? 'Unknown Service'}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">{formatDate(log.serviced_at)}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums w-16 text-right">{log.price_paid ? formatCurrency(log.price_paid) : ''}</span>
                     </Link>
                     <DeleteLogButton logId={log.id} />
                   </div>
